@@ -1,0 +1,26 @@
+# --- Core API ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+python-multipart==0.0.20
+
+# --- Agentic AI / LLM (optional at runtime; offline fallback works without keys) ---
+# Set LLM_PROVIDER=anthropic or LLM_PROVIDER=openai to pick; auto-detected from which key is set.
+anthropic>=0.40.0
+openai>=1.87.0,<2
+openai-agents==0.0.19
+langgraph==0.2.61
+
+# --- Vector DB + embeddings (optional; keyword fallback otherwise) ---
+chromadb==0.5.23
+
+# --- Document processing ---
+pypdf==5.1.0
+python-docx==1.1.2
+
+# --- Reporting ---
+reportlab==4.2.5
+
+# --- Database (PostgreSQL driver; app runs without a DB too) ---
+psycopg2-binary==2.9.10
+SQLAlchemy==2.0.36
