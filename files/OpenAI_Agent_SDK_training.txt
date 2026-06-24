@@ -1,0 +1,54 @@
+1. OpenAI has come up with the chatgpt/agents.
+This is only available with the enterprise service. or busines service
+I am not able to access it.
+
+This provides templates for the agents
+These agents are Headless , 
+Agent harness
+Agent building process is through the chat with agent builder
+configure the agents
+
+Skills - is the package workflow that is implemented over and over again.
+
+Agent builder can add the predefined skills and also create a skill and upload it.
+
+Memory usage 
+Set the max and min memory for longterm and short term memory
+
+Organization can have the knowledge and shared memory?
+
+Agents can be connected to the projects.
+
+Knowledge can be added to project
+
+Connectors
+We can connect the agents with different apps. such as slack or other channels
+Connectors have scope defined attachment
+Connectors are implemented internally using the MCP
+
+Headles agents is important feature as it runs the tasks automatically
+
+We can get all the metrics and managemtnt data about tokens connections connected agents etc using the API
+
+We now consider the agent as part of the workforce resourscew
+
+Second Brain vs Obsidian
+
+Obsidian - second brain codex workflow,
+
+
+Codex as daily driver , Obsidian as second brain, 
+but workspace agent allows to share the workflow accross the organization
+
+I think:
+
+1. the hackathn does not expect all to use the agentic workflows.
+2. independintly implementing the parellel agents is required.
+3. developing the generic template agenitc workflow will gain more points in hackathon
+4. I think the OpenAI will take the ideas and use for the business. not sure what creadit will we get
+5. for learning point of view workflow should have business value and generic nature to get more points
+6. implimentation optimization, memory optimization, security of the model, inner details of MCP are not great value adders compared to business and generic nature
+
+
+
+
