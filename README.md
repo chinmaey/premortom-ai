@@ -84,12 +84,21 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
+Backend HTTP API:
+
+- Base URL: http://localhost:8000
+- API docs: http://localhost:8000/docs
+- Health check: http://localhost:8000/health
+
 **Frontend**
 ```bash
 cd premortem-ai/frontend
 pip install -r requirements.txt
 streamlit run app.py
 ```
+
+The backend and frontend load `../.env` automatically for local runs. Values
+already exported in your shell or provided by Docker still take precedence.
 
 Open http://localhost:8501, click **Load AIIMS MRI demo**, then **Run PreMortem**.
 

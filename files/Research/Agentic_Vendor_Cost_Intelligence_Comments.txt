@@ -1,0 +1,244 @@
+I reviewed the PPT content. Overall, the research direction is valid and aligned with actual gaps in procurement platforms, but for a hackathon and especially for an Agentic AI solution, the current slides stop at a "cost intelligence" level. To make it stronger and more differentiated, you should expand from Vendor Cost Intelligence → PreMortem Decision Intelligence.
+Authentication of Current PPT
+Slide 2: Existing Procurement Solutions
+The statement is largely correct.
+Major platforms such as:
+Zycus
+Coupa
+Ivalua
+provide:
+Supplier Management
+Strategic Sourcing
+Contract Management
+Spend Analytics
+Procure-to-Pay
+Compliance
+Gap
+They mostly answer:
+"What happened?"
+or
+"What is happening?"
+They rarely answer:
+"What is likely to go wrong before approval?"
+This is where your idea becomes unique.
+Slide 7 – Problem Statement (Expanded)
+Current version is good but too narrow.
+Recommended Version
+Problem Statement
+Organizations lose millions due to procurement decisions that appear compliant but later result in:
+Vendor underperformance
+Contract drift
+Cost overruns
+Delayed deliveries
+Warranty disputes
+Infrastructure readiness failures
+Idle assets
+Existing procurement systems automate workflows but do not proactively challenge decisions or predict failure scenarios before approvals are granted.
+Sub Items
+Cost Risks
+Overpriced vendors
+Hidden charges
+Rate inflation
+Contract Risks
+Weak penalty clauses
+Unbalanced payment terms
+Warranty exclusions
+Operational Risks
+Site not ready
+Missing approvals
+Lack of trained staff
+Vendor Risks
+Financial instability
+Litigation
+Delivery history
+Slide 8 – Proposed Solution (Major Expansion)
+Title
+PreMortem AI – Agentic Procurement Decision Auditor
+Solution Overview
+PreMortem uses multiple AI agents that independently investigate procurement decisions before approval.
+The agents simulate an internal review board and identify hidden risks, financial exposure, and likely failure modes.
+Agent Architecture
+Contract Risk Agent
+Analyzes:
+Payment terms
+Penalties
+Warranty clauses
+Liability clauses
+Output:
+Plain Text
+Warranty excludes electrical failures
+Risk: High
+
+
+Vendor Intelligence Agent
+Analyzes:
+Vendor reputation
+Litigation
+Delivery history
+News reports
+Output:
+Plain Text
+Vendor involved in 3 unresolved legal disputes
+
+
+Cost Benchmark Agent
+Analyzes:
+Market pricing
+Historical procurement prices
+GeM data
+Output:
+Plain Text
+Quoted price exceeds benchmark by 18%
+
+
+Invoice Drift Agent
+Analyzes:
+Contract vs Invoice
+Output:
+Plain Text
+Detected rate increase of 12%
+
+
+Negotiation Agent
+Suggests:
+Better payment terms
+Penalties
+Warranty improvements
+Output:
+Plain Text
+Reduce advance payment from 70% to 30%
+
+
+PreMortem Simulation Agent
+Predicts:
+Plain Text
+Imagine this project failed
+6 months from now.
+What caused it?
+Identifies likely causes.
+New Slide 9 – AI Investigation Workflow
+Add this slide.
+Workflow
+Plain Text
+Upload Contract
+        ↓
+Extract Terms
+        ↓
+Run AI Agents
+        ↓
+Collect Findings
+        ↓
+Debate Findings
+        ↓
+Risk Scoring
+        ↓
+Go / No-Go Decision
+
+
+Sample
+Input:
+Plain Text
+MRI Procurement
+Value:
+₹20 Cr
+AI Findings:
+Plain Text
+Warranty Risk
+Vendor Litigation
+18% Above Market
+No Installation Readiness
+
+
+New Slide 10 – Risk Intelligence Dashboard
+Components
+Overall Risk Score
+Plain Text
+Risk Score
+78/100
+
+
+Risk Breakdown
+Area	Score
+Contract	80
+Vendor	72
+Cost	65
+Compliance	55
+Operational	90
+Financial Exposure
+Plain Text
+Potential Loss
+₹4.2 Crore
+
+
+New Slide 11 – Future Failure Simulation
+This will be the strongest hackathon slide.
+Scenario
+Procurement Approved
+Plain Text
+MRI Machine
+₹20 Cr
+
+
+Six Months Later
+Plain Text
+Equipment delivered
+Installation delayed
+Warranty active
+No technicians
+Hospital outsourcing scans
+
+
+Root Cause Analysis
+Plain Text
+Site readiness not verified
+
+
+AI Recommendation
+Plain Text
+NO-GO
+Until:
+Facility Ready
+Technicians Trained
+Warranty Revised
+
+
+New Slide 12 – Competitive Differentiation
+Capability	Existing Platforms	PreMortem AI
+Spend Analytics	Yes	Yes
+Contract Management	Yes	Yes
+Supplier Management	Yes	Yes
+Risk Prediction	Limited	Yes
+Failure Simulation	No	Yes
+Decision Auditing	No	Yes
+Multi-Agent Review	No	Yes
+Go/No-Go Recommendation	No	Yes
+New Slide 13 – Expected Benefits (Expanded)
+Financial
+Reduce procurement leakage
+Reduce cost overruns
+Better vendor negotiations
+Operational
+Faster approvals
+Better visibility
+Compliance
+Improved audit readiness
+Stronger governance
+Strategic
+Preserve institutional knowledge
+AI-assisted decision making
+Hospital-Specific
+Avoid idle equipment
+Reduce patient-care disruption
+Improve utilization
+My Assessment
+The PPT research is about 80% correct, but it currently describes a Vendor Cost Intelligence platform, which many vendors partially address already.
+For a hackathon-winning idea, shift the narrative to:
+"PreMortem AI – The Agentic Decision Auditor that predicts procurement failures before approval."
+That creates a much stronger differentiation than simply identifying vendor cost leakage.
+ 
+ 
+ 
+ 
+ 
+ 
+ 
