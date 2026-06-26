@@ -1,0 +1,246 @@
+{
+  "experiment": {
+    "name": "small_medium_hospital_quote_selection",
+    "description": "Synthetic 100 x 20 procurement quote evaluation dataset for small and medium hospital equipment purchasing.",
+    "num_bids": 100,
+    "quotes_per_bid": 20,
+    "random_seed": 42,
+    "pdf_base_url": "",
+    "currency": "INR Crore"
+  },
+  "top_10_candidate_criteria": [
+    {
+      "id": "clinical_fit",
+      "name": "Clinical fit and specification match",
+      "description": "Measures whether the quote meets clinical needs, patient volume, specialty use cases, required features, and workflow."
+    },
+    {
+      "id": "total_cost_of_ownership",
+      "name": "Total cost of ownership",
+      "description": "Includes purchase price, installation, AMC/CMC, consumables, spares, software licenses, upgrades, energy cost, and downtime cost."
+    },
+    {
+      "id": "service_maintenance_readiness",
+      "name": "Service and maintenance readiness",
+      "description": "Evaluates local service availability, response time, spare parts access, uptime commitment, warranty support, and escalation process."
+    },
+    {
+      "id": "infrastructure_workforce_readiness",
+      "name": "Infrastructure and workforce readiness",
+      "description": "Checks whether site, approvals, utilities, operators, biomedical support, and clinical staff readiness are sufficient."
+    },
+    {
+      "id": "training_workforce_readiness",
+      "name": "Training and workforce readiness",
+      "description": "Evaluates whether doctors, technicians, biomedical staff, and operators can safely and effectively use the equipment."
+    },
+    {
+      "id": "strategic_business_value",
+      "name": "Strategic business value",
+      "description": "Considers revenue potential, patient demand, referral growth, competitive positioning, future service-line expansion, and hospital brand impact."
+    },
+    {
+      "id": "vendor_reliability",
+      "name": "Vendor reliability and past performance",
+      "description": "Reviews delivery history, references, service track record, financial stability, and experience with similar hospitals."
+    },
+    {
+      "id": "financial_terms",
+      "name": "Financial terms and payment risk",
+      "description": "Considers advance payment, milestone payments, warranty start date, penalties, financing, buyback, and cancellation clauses."
+    },
+    {
+      "id": "brand_market_acceptance",
+      "name": "Brand reputation and market acceptance",
+      "description": "Includes international or local brand trust, clinician confidence, patient perception, resale value, and marketability."
+    },
+    {
+      "id": "regulatory_compliance",
+      "name": "Regulatory and compliance fit",
+      "description": "Checks certifications, local approvals, safety standards, documentation, warranty enforceability, and audit readiness."
+    }
+  ],
+  "weighted_decision_criteria": [
+    {
+      "id": "clinical_fit",
+      "weight_pct": 25,
+      "hard_minimum_score": 60
+    },
+    {
+      "id": "total_cost_of_ownership",
+      "weight_pct": 20,
+      "hard_minimum_score": 50
+    },
+    {
+      "id": "service_maintenance_readiness",
+      "weight_pct": 20,
+      "hard_minimum_score": 65
+    },
+    {
+      "id": "infrastructure_workforce_readiness",
+      "weight_pct": 20,
+      "hard_minimum_score": 55
+    },
+    {
+      "id": "strategic_business_value",
+      "weight_pct": 15,
+      "hard_minimum_score": 40
+    }
+  ],
+  "guardrails": [
+    {
+      "id": "vendor_contract_risk",
+      "name": "Vendor reliability and contractual risk",
+      "blocking_conditions": [
+        "warranty starts on delivery while installation is delayed",
+        "very high advance payment without milestone protection",
+        "no local service path for critical equipment",
+        "unclear delivery or installation responsibility"
+      ]
+    },
+    {
+      "id": "regulatory_compliance",
+      "name": "International standards and regulatory compliance",
+      "blocking_conditions": [
+        "missing local regulatory approval for regulated equipment",
+        "missing safety standards such as IEC 60601 where required",
+        "missing quality system evidence such as ISO 13485 where required",
+        "compliance claims without attached certificate references"
+      ]
+    }
+  ],
+  "bid_categories": [
+    {
+      "equipment_type": "MRI Machine",
+      "expected_contract_value_cr": [16.0, 24.0],
+      "expected_delivery_months": [4.0, 7.0],
+      "required_compliance": ["IEC 60601", "ISO 13485", "local regulatory approval"],
+      "training_required": true
+    },
+    {
+      "equipment_type": "CT Scanner",
+      "expected_contract_value_cr": [8.0, 16.0],
+      "expected_delivery_months": [3.0, 6.0],
+      "required_compliance": ["IEC 60601", "ISO 13485", "local regulatory approval"],
+      "training_required": true
+    },
+    {
+      "equipment_type": "Advanced Ultrasound Machine",
+      "expected_contract_value_cr": [0.6, 1.4],
+      "expected_delivery_months": [1.0, 3.0],
+      "required_compliance": ["IEC 60601", "local regulatory approval"],
+      "training_required": true
+    },
+    {
+      "equipment_type": "Biochemistry Analyzer",
+      "expected_contract_value_cr": [0.9, 2.0],
+      "expected_delivery_months": [1.0, 3.0],
+      "required_compliance": ["ISO 13485", "local regulatory approval"],
+      "training_required": true
+    },
+    {
+      "equipment_type": "ICU Ventilator System",
+      "expected_contract_value_cr": [0.5, 1.5],
+      "expected_delivery_months": [1.0, 3.0],
+      "required_compliance": ["IEC 60601", "ISO 13485", "local regulatory approval"],
+      "training_required": true
+    }
+  ],
+  "vendor_types": [
+    {
+      "id": "international_premium_brand",
+      "label": "International premium brand",
+      "score_bias": {
+        "clinical_fit": 12,
+        "brand_market_acceptance": 15,
+        "strategic_business_value": 10,
+        "total_cost_of_ownership": -10
+      }
+    },
+    {
+      "id": "local_supplier_strong_support",
+      "label": "Local supplier with strong support",
+      "score_bias": {
+        "service_maintenance_readiness": 15,
+        "infrastructure_workforce_readiness": 8,
+        "total_cost_of_ownership": 5,
+        "brand_market_acceptance": -5
+      }
+    },
+    {
+      "id": "low_cost_vendor",
+      "label": "Low-cost vendor",
+      "score_bias": {
+        "total_cost_of_ownership": 12,
+        "financial_terms": -10,
+        "service_maintenance_readiness": -12,
+        "regulatory_compliance": -8
+      }
+    },
+    {
+      "id": "refurbished_supplier",
+      "label": "Refurbished or older-model supplier",
+      "score_bias": {
+        "total_cost_of_ownership": 10,
+        "clinical_fit": -10,
+        "regulatory_compliance": -12,
+        "strategic_business_value": -8
+      }
+    },
+    {
+      "id": "new_entrant",
+      "label": "New entrant with limited history",
+      "score_bias": {
+        "strategic_business_value": 4,
+        "vendor_reliability": -15,
+        "service_maintenance_readiness": -5
+      }
+    }
+  ],
+  "quote_archetypes": [
+    {
+      "id": "ground_truth_winner",
+      "count_per_bid": 1,
+      "score_range": [78, 95],
+      "description": "Best balanced quote with strong fit, service, compliance, and acceptable cost."
+    },
+    {
+      "id": "close_runner_up",
+      "count_per_bid": 1,
+      "score_range": [72, 88],
+      "description": "Strong alternative with one meaningful weakness."
+    },
+    {
+      "id": "strong_contender",
+      "count_per_bid": 3,
+      "score_range": [65, 82],
+      "description": "Acceptable quote that could enter a shortlist."
+    },
+    {
+      "id": "average_acceptable",
+      "count_per_bid": 5,
+      "score_range": [50, 72],
+      "description": "Usable but not clearly superior."
+    },
+    {
+      "id": "high_risk",
+      "count_per_bid": 5,
+      "score_range": [25, 58],
+      "description": "Quote with major operational, financial, service, or compliance risk."
+    },
+    {
+      "id": "edge_case",
+      "count_per_bid": 5,
+      "score_range": [35, 78],
+      "description": "Difficult comparison case such as cheap but risky, strong brand with weak local support, or strategic value with readiness gaps."
+    }
+  ],
+  "quote_format_variations": [
+    "complete",
+    "partially_complete",
+    "overly_promotional",
+    "compliance_heavy",
+    "price_heavy",
+    "service_heavy"
+  ]
+}

@@ -1,0 +1,291 @@
+{
+  "experiment": {
+    "name": "small_medium_hospital_quote_selection",
+    "description": "Synthetic 100 x 20 procurement quote evaluation dataset for small and medium hospital equipment purchasing.",
+    "num_bids": 1,
+    "quotes_per_bid": 20,
+    "random_seed": 42,
+    "pdf_base_url": "",
+    "currency": "INR Crore",
+    "new_bids_generated": 1,
+    "num_samples": 5,
+    "new_samples_generated": 5
+  },
+  "criteria": [
+    {
+      "id": "clinical_fit",
+      "weight_pct": 25,
+      "hard_minimum_score": 60
+    },
+    {
+      "id": "total_cost_of_ownership",
+      "weight_pct": 20,
+      "hard_minimum_score": 50
+    },
+    {
+      "id": "service_maintenance_readiness",
+      "weight_pct": 20,
+      "hard_minimum_score": 65
+    },
+    {
+      "id": "infrastructure_workforce_readiness",
+      "weight_pct": 20,
+      "hard_minimum_score": 55
+    },
+    {
+      "id": "strategic_business_value",
+      "weight_pct": 15,
+      "hard_minimum_score": 40
+    }
+  ],
+  "guardrails": [
+    {
+      "id": "vendor_contract_risk",
+      "name": "Vendor reliability and contractual risk",
+      "blocking_conditions": [
+        "warranty starts on delivery while installation is delayed",
+        "very high advance payment without milestone protection",
+        "no local service path for critical equipment",
+        "unclear delivery or installation responsibility"
+      ]
+    },
+    {
+      "id": "regulatory_compliance",
+      "name": "International standards and regulatory compliance",
+      "blocking_conditions": [
+        "missing local regulatory approval for regulated equipment",
+        "missing safety standards such as IEC 60601 where required",
+        "missing quality system evidence such as ISO 13485 where required",
+        "compliance claims without attached certificate references"
+      ]
+    }
+  ],
+  "bids": [
+    {
+      "bid_id": "BID-001",
+      "procurement_name": "MRI Machine Procurement",
+      "equipment_type": "MRI Machine",
+      "hospital_context": {
+        "hospital_type": "small_hospital",
+        "city_tier": "tier_2",
+        "construction_completion_pct": 55,
+        "electrical_readiness": "Not Started",
+        "regulatory_approval_status": "Not Started",
+        "technicians_available": 4,
+        "technicians_required": 2,
+        "historical_delays_months": [
+          7.5,
+          1.3,
+          2.0
+        ]
+      },
+      "published_bid_criteria": {
+        "contract_value_expected_cr": 16.2,
+        "delivery_timeline_expected_months": 4.8,
+        "warranty_start_preference": "On Commissioning",
+        "installation_responsibility_preference": "Vendor",
+        "compliance_required": [
+          "IEC 60601",
+          "ISO 13485",
+          "local regulatory approval"
+        ],
+        "training_required": true
+      },
+      "quotes": [
+        {
+          "quote_id": "BID-001-Q01",
+          "vendor_name": "StartCare Devices 01",
+          "vendor_type": "new_entrant",
+          "vendor_type_label": "New entrant with limited history",
+          "archetype": "strong_contender",
+          "format_variation": "overly_promotional",
+          "contract_value_cr": 15.84,
+          "advance_payment_pct": 40,
+          "delivery_timeline_months": 6.6,
+          "warranty_start": "On Commissioning",
+          "installation_responsibility": "Vendor",
+          "training_included": true,
+          "service_response_hours": 24,
+          "local_service_team": false,
+          "compliance_claims": [
+            "IEC 60601",
+            "ISO 13485",
+            "local regulatory approval"
+          ],
+          "criteria_scores": {
+            "clinical_fit": 71,
+            "total_cost_of_ownership": 69,
+            "service_maintenance_readiness": 73,
+            "infrastructure_workforce_readiness": 76,
+            "training_workforce_readiness": 67,
+            "strategic_business_value": 75,
+            "vendor_reliability": 54,
+            "financial_terms": 68,
+            "brand_market_acceptance": 76,
+            "regulatory_compliance": 66
+          },
+          "weighted_decision_score": 72.6,
+          "pdf_path": "bids/BID-001/BID-001-Q01.pdf",
+          "pdf_url": ""
+        },
+        {
+          "quote_id": "BID-001-Q02",
+          "vendor_name": "BudgetMed Systems 02",
+          "vendor_type": "low_cost_vendor",
+          "vendor_type_label": "Low-cost vendor",
+          "archetype": "strong_contender",
+          "format_variation": "compliance_heavy",
+          "contract_value_cr": 14.85,
+          "advance_payment_pct": 50,
+          "delivery_timeline_months": 4.0,
+          "warranty_start": "On Installation",
+          "installation_responsibility": "Buyer",
+          "training_included": true,
+          "service_response_hours": 12,
+          "local_service_team": true,
+          "compliance_claims": [
+            "IEC 60601",
+            "ISO 13485",
+            "local regulatory approval"
+          ],
+          "criteria_scores": {
+            "clinical_fit": 81,
+            "total_cost_of_ownership": 97,
+            "service_maintenance_readiness": 68,
+            "infrastructure_workforce_readiness": 82,
+            "training_workforce_readiness": 72,
+            "strategic_business_value": 75,
+            "vendor_reliability": 76,
+            "financial_terms": 62,
+            "brand_market_acceptance": 75,
+            "regulatory_compliance": 65
+          },
+          "weighted_decision_score": 80.9,
+          "pdf_path": "bids/BID-001/BID-001-Q02.pdf",
+          "pdf_url": ""
+        },
+        {
+          "quote_id": "BID-001-Q03",
+          "vendor_name": "SonoCare Diagnostics 03",
+          "vendor_type": "local_supplier_strong_support",
+          "vendor_type_label": "Local supplier with strong support",
+          "archetype": "strong_contender",
+          "format_variation": "partially_complete",
+          "contract_value_cr": 14.75,
+          "advance_payment_pct": 70,
+          "delivery_timeline_months": 4.9,
+          "warranty_start": "On Delivery",
+          "installation_responsibility": "Shared",
+          "training_included": true,
+          "service_response_hours": 12,
+          "local_service_team": true,
+          "compliance_claims": [
+            "IEC 60601",
+            "ISO 13485",
+            "local regulatory approval"
+          ],
+          "criteria_scores": {
+            "clinical_fit": 66,
+            "total_cost_of_ownership": 81,
+            "service_maintenance_readiness": 85,
+            "infrastructure_workforce_readiness": 77,
+            "training_workforce_readiness": 71,
+            "strategic_business_value": 73,
+            "vendor_reliability": 72,
+            "financial_terms": 63,
+            "brand_market_acceptance": 55,
+            "regulatory_compliance": 65
+          },
+          "weighted_decision_score": 76.05,
+          "pdf_path": "bids/BID-001/BID-001-Q03.pdf",
+          "pdf_url": ""
+        },
+        {
+          "quote_id": "BID-001-Q04",
+          "vendor_name": "MediBridge Technologies 04",
+          "vendor_type": "new_entrant",
+          "vendor_type_label": "New entrant with limited history",
+          "archetype": "ground_truth_winner",
+          "format_variation": "price_heavy",
+          "contract_value_cr": 19.85,
+          "advance_payment_pct": 60,
+          "delivery_timeline_months": 5.7,
+          "warranty_start": "On Installation",
+          "installation_responsibility": "Shared",
+          "training_included": true,
+          "service_response_hours": 48,
+          "local_service_team": true,
+          "compliance_claims": [
+            "IEC 60601",
+            "ISO 13485",
+            "local regulatory approval"
+          ],
+          "criteria_scores": {
+            "clinical_fit": 84,
+            "total_cost_of_ownership": 89,
+            "service_maintenance_readiness": 76,
+            "infrastructure_workforce_readiness": 78,
+            "training_workforce_readiness": 90,
+            "strategic_business_value": 87,
+            "vendor_reliability": 61,
+            "financial_terms": 75,
+            "brand_market_acceptance": 76,
+            "regulatory_compliance": 85
+          },
+          "weighted_decision_score": 82.65,
+          "pdf_path": "bids/BID-001/BID-001-Q04.pdf",
+          "pdf_url": ""
+        },
+        {
+          "quote_id": "BID-001-Q05",
+          "vendor_name": "MedNova Systems 05",
+          "vendor_type": "international_premium_brand",
+          "vendor_type_label": "International premium brand",
+          "archetype": "close_runner_up",
+          "format_variation": "complete",
+          "contract_value_cr": 21.6,
+          "advance_payment_pct": 30,
+          "delivery_timeline_months": 3.8,
+          "warranty_start": "On Delivery",
+          "installation_responsibility": "Buyer",
+          "training_included": true,
+          "service_response_hours": 24,
+          "local_service_team": false,
+          "compliance_claims": [
+            "IEC 60601",
+            "ISO 13485",
+            "local regulatory approval"
+          ],
+          "criteria_scores": {
+            "clinical_fit": 89,
+            "total_cost_of_ownership": 79,
+            "service_maintenance_readiness": 87,
+            "infrastructure_workforce_readiness": 87,
+            "training_workforce_readiness": 80,
+            "strategic_business_value": 90,
+            "vendor_reliability": 77,
+            "financial_terms": 75,
+            "brand_market_acceptance": 100,
+            "regulatory_compliance": 86
+          },
+          "weighted_decision_score": 86.35,
+          "pdf_path": "bids/BID-001/BID-001-Q05.pdf",
+          "pdf_url": ""
+        }
+      ],
+      "ground_truth": {
+        "top_1": "BID-001-Q05",
+        "top_2": [
+          "BID-001-Q05",
+          "BID-001-Q04"
+        ],
+        "top_3": [
+          "BID-001-Q05",
+          "BID-001-Q04",
+          "BID-001-Q02"
+        ],
+        "notes": "Ground truth is based on weighted criteria score with guardrail-sensitive synthetic quote generation. Human review can replace this label for real datasets."
+      }
+    }
+  ]
+}
