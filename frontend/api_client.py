@@ -116,6 +116,27 @@ def get_bid_run_events(run_id: str, since: int = 0) -> dict:
     return r.json()
 
 
+def get_bid_run_graph(run_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bid-runs/{run_id}/graph", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def list_bid_run_artifacts(run_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bid-runs/{run_id}/artifacts", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_bid_run_artifact(run_id: str, artifact_id: str) -> dict:
+    r = requests.get(
+        f"{API_BASE}/bid-runs/{run_id}/artifacts/{artifact_id}",
+        timeout=TIMEOUT,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
 def get_bid_run_result(run_id: str) -> dict:
     r = requests.get(f"{API_BASE}/bid-runs/{run_id}/result", timeout=TIMEOUT)
     r.raise_for_status()

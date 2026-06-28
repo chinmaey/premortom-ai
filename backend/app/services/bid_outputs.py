@@ -33,6 +33,33 @@ EVENTS_FILE = "events.jsonl"
 CONTRACT_REVIEW_FILE = "contract_review_agent_quote_reviews.json"
 BID_RECOMMENDER_RESULT_FILE = "bid_recommender_agent_decision_result.json"
 
+ARTIFACTS = {
+    "artifact_run_state": {
+        "node_id": "orchestrator",
+        "artifact_type": "state",
+        "name": "Run State",
+        "filename": RUN_STATE_FILE,
+    },
+    "artifact_events": {
+        "node_id": "orchestrator",
+        "artifact_type": "events",
+        "name": "Run Events",
+        "filename": EVENTS_FILE,
+    },
+    "artifact_contract_review": {
+        "node_id": "contract_review",
+        "artifact_type": "quote_reviews",
+        "name": "Contract Review Results",
+        "filename": CONTRACT_REVIEW_FILE,
+    },
+    "artifact_bid_recommendation": {
+        "node_id": "bid_recommender",
+        "artifact_type": "decision_result",
+        "name": "Bid Recommendation",
+        "filename": BID_RECOMMENDER_RESULT_FILE,
+    },
+}
+
 
 def create_run(bid_id: str, quote_ids: List[str]) -> Dict[str, str]:
     rows = read_run_rows()
@@ -164,6 +191,66 @@ def get_events(run_id: str, since: int = 0) -> Dict[str, object]:
     return {"run_id": run_id, "events": events, "next_since": next_since}
 
 
+def get_graph(run_id: str) -> Dict[str, object]:
+    state = get_state(run_id)
+    graph = state.get("graph") or {"nodes": [], "edges": []}
+    return {
+        "run_id": run_id,
+        "nodes": graph.get("nodes", []),
+        "edges": graph.get("edges", []),
+    }
+
+
+def list_artifacts(run_id: str) -> Dict[str, object]:
+    run_dir = BID_RUNS_DIR / run_id
+    artifacts = []
+    for artifact_id, meta in ARTIFACTS.items():
+        path = run_dir / meta["filename"]
+        status = "ready" if path.exists() else "pending"
+        created_at = ""
+        if path.exists():
+            created_at = datetime.fromtimestamp(
+                path.stat().st_mtime,
+                tz=timezone.utc,
+            ).isoformat()
+        artifacts.append(
+            {
+                "artifact_id": artifact_id,
+                "node_id": meta["node_id"],
+                "artifact_type": meta["artifact_type"],
+                "name": meta["name"],
+                "status": status,
+                "media_type": "application/json",
+                "path": str(path),
+                "created_at": created_at,
+            }
+        )
+    return {"run_id": run_id, "artifacts": artifacts}
+
+
+def get_artifact(run_id: str, artifact_id: str) -> Dict[str, object]:
+    if artifact_id not in ARTIFACTS:
+        raise KeyError(f"Unknown artifact_id: {artifact_id}")
+
+    meta = ARTIFACTS[artifact_id]
+    path = BID_RUNS_DIR / run_id / meta["filename"]
+    if artifact_id == "artifact_events":
+        content: object = get_events(run_id, since=0)
+    elif path.exists():
+        content = read_json(path)
+    else:
+        content = None
+
+    return {
+        "run_id": run_id,
+        "artifact_id": artifact_id,
+        "node_id": meta["node_id"],
+        "artifact_type": meta["artifact_type"],
+        "status": "ready" if path.exists() else "pending",
+        "content": content,
+    }
+
+
 def append_event(run_id: str, event_type: str, payload: Dict[str, object]) -> None:
     run_dir = BID_RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -225,14 +312,18 @@ def _initial_state(run_id: str, bid_id: str, quote_ids: List[str]) -> Dict[str, 
         "quotes": [{"quote_id": quote_id, "status": "pending"} for quote_id in quote_ids],
         "graph": {
             "nodes": [
-                {"id": "bid_recommender", "label": "Bid Recommender", "status": "waiting"},
-                {"id": "contract_review", "label": "Contract Review", "status": "waiting"},
-                {"id": "decision_logic", "label": "Decision Logic", "status": "waiting"},
+                {"id": "bid_recommender", "type": "agent", "label": "Bid Recommender", "status": "waiting"},
+                {"id": "contract_review", "type": "agent", "label": "Contract Review", "status": "waiting"},
+                {"id": "decision_logic", "type": "decision_step", "label": "Decision Logic", "status": "waiting"},
+                {"id": "document_store", "type": "data_store", "label": "Local PDF Store", "status": "ok"},
+                {"id": "llm_provider", "type": "external_connection", "label": "LLM Provider", "status": "pending"},
             ],
             "edges": [
-                {"source": "bid_recommender", "target": "contract_review", "status": "waiting"},
-                {"source": "contract_review", "target": "bid_recommender", "status": "waiting"},
-                {"source": "bid_recommender", "target": "decision_logic", "status": "waiting"},
+                {"source": "bid_recommender", "target": "contract_review", "type": "delegates_to", "status": "waiting"},
+                {"source": "contract_review", "target": "bid_recommender", "type": "returns_result_to", "status": "waiting"},
+                {"source": "bid_recommender", "target": "decision_logic", "type": "passes_results_to", "status": "waiting"},
+                {"source": "contract_review", "target": "document_store", "type": "reads_from", "status": "waiting"},
+                {"source": "contract_review", "target": "llm_provider", "type": "uses_external_service", "status": "waiting"},
             ],
         },
         "external_connections": [

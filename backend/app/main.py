@@ -184,6 +184,24 @@ def get_bid_run_events(run_id: str, since: int = 0):
     return bid_outputs.get_events(run_id, since)
 
 
+@app.get("/bid-runs/{run_id}/graph")
+def get_bid_run_graph(run_id: str):
+    return bid_outputs.get_graph(run_id)
+
+
+@app.get("/bid-runs/{run_id}/artifacts")
+def list_bid_run_artifacts(run_id: str):
+    return bid_outputs.list_artifacts(run_id)
+
+
+@app.get("/bid-runs/{run_id}/artifacts/{artifact_id}")
+def get_bid_run_artifact(run_id: str, artifact_id: str):
+    try:
+        return bid_outputs.get_artifact(run_id, artifact_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @app.get("/bid-runs/{run_id}/result")
 def get_bid_run_result(run_id: str):
     return bid_outputs.get_result(run_id)

@@ -479,6 +479,185 @@ files/output/bid_runs/{run_id}/events.jsonl
 
 This endpoint can power incremental polling and can later be reused for SSE or WebSocket.
 
+### Get Run Graph
+
+```text
+GET /bid-runs/{run_id}/graph
+```
+
+Purpose:
+
+- Return the execution graph for the run.
+- Let the UI render agents, decision steps, external systems, and connections without hardcoded screen logic.
+- Keep the UI compatible with future graph-based execution engines.
+
+Response:
+
+```json
+{
+  "run_id": "RUN-001",
+  "nodes": [
+    {
+      "id": "bid_recommender",
+      "type": "agent",
+      "label": "Bid Recommender Agent",
+      "status": "running"
+    },
+    {
+      "id": "contract_review",
+      "type": "agent",
+      "label": "Contract Review Agent",
+      "status": "completed"
+    },
+    {
+      "id": "decision_logic",
+      "type": "decision_step",
+      "label": "Decision Logic",
+      "status": "waiting"
+    },
+    {
+      "id": "llm_provider",
+      "type": "external_connection",
+      "label": "LLM Provider",
+      "status": "ok"
+    }
+  ],
+  "edges": [
+    {
+      "source": "bid_recommender",
+      "target": "contract_review",
+      "type": "delegates_to",
+      "status": "completed"
+    },
+    {
+      "source": "contract_review",
+      "target": "bid_recommender",
+      "type": "returns_result_to",
+      "status": "completed"
+    },
+    {
+      "source": "contract_review",
+      "target": "llm_provider",
+      "type": "uses_external_service",
+      "status": "completed"
+    },
+    {
+      "source": "bid_recommender",
+      "target": "decision_logic",
+      "type": "passes_results_to",
+      "status": "waiting"
+    }
+  ]
+}
+```
+
+Node types:
+
+- `agent`
+- `decision_step`
+- `tool`
+- `external_connection`
+- `data_store`
+- `human_review`
+
+Edge types:
+
+- `delegates_to`
+- `returns_result_to`
+- `depends_on`
+- `passes_results_to`
+- `uses_tool`
+- `uses_external_service`
+- `reads_from`
+- `writes_to`
+
+For the first implementation, the backend can return a fixed graph with dynamic statuses. Later, if the execution engine becomes graph-native, this endpoint can return the actual runtime graph.
+
+### List Run Artifacts
+
+```text
+GET /bid-runs/{run_id}/artifacts
+```
+
+Purpose:
+
+- Return metadata for all outputs produced by graph nodes.
+- Allow the UI to discover outputs by `node_id` and `artifact_type` instead of hardcoded filenames.
+- Support adding new agents without changing the UI API contract.
+
+Response:
+
+```json
+{
+  "run_id": "RUN-001",
+  "artifacts": [
+    {
+      "artifact_id": "artifact_contract_review",
+      "node_id": "contract_review",
+      "artifact_type": "quote_reviews",
+      "name": "Contract Review Results",
+      "status": "ready",
+      "media_type": "application/json",
+      "path": "files/output/bid_runs/RUN-001/contract_review_agent_quote_reviews.json",
+      "created_at": "2026-06-27T10:02:00Z"
+    },
+    {
+      "artifact_id": "artifact_bid_recommendation",
+      "node_id": "bid_recommender",
+      "artifact_type": "decision_result",
+      "name": "Bid Recommendation",
+      "status": "ready",
+      "media_type": "application/json",
+      "path": "files/output/bid_runs/RUN-001/bid_recommender_agent_decision_result.json",
+      "created_at": "2026-06-27T10:05:00Z"
+    }
+  ]
+}
+```
+
+Recommended first artifact IDs:
+
+```text
+artifact_contract_review
+artifact_bid_recommendation
+artifact_run_state
+artifact_events
+artifact_telemetry
+artifact_report
+```
+
+### Get Run Artifact
+
+```text
+GET /bid-runs/{run_id}/artifacts/{artifact_id}
+```
+
+Purpose:
+
+- Return the content of one artifact.
+- Keep Streamlit from reading files directly.
+- Allow the backend to move from local files to object storage later.
+
+Example:
+
+```text
+GET /bid-runs/RUN-001/artifacts/artifact_contract_review
+```
+
+Response:
+
+```json
+{
+  "run_id": "RUN-001",
+  "artifact_id": "artifact_contract_review",
+  "node_id": "contract_review",
+  "artifact_type": "quote_reviews",
+  "content": {
+    "quote_reviews": []
+  }
+}
+```
+
 ### Get Final Result
 
 ```text
@@ -499,13 +678,14 @@ Response:
   },
   "ranked_quotes": [],
   "feedback": [],
-  "output_files": {
-    "bid_recommender_agent": "files/output/bid_runs/RUN-001/bid_recommender_agent_decision_result.json",
-    "contract_review_agent": "files/output/bid_runs/RUN-001/contract_review_agent_quote_reviews.json",
-    "report": "files/output/bid_runs/RUN-001/report.json"
-  }
+  "artifact_refs": [
+    "artifact_bid_recommendation",
+    "artifact_contract_review"
+  ]
 }
 ```
+
+`/result` is a business-friendly shortcut. It should contain only the final decision package needed by the dashboard and report screens. Detailed agent outputs should be accessed through `/artifacts`.
 
 ### List Runs For Bid
 
@@ -529,55 +709,44 @@ Response:
 }
 ```
 
-## Output Artifact Access For UI Screens
+## Graph-Based Result Access For UI Screens
 
-The UI should not read output files directly from the filesystem. Streamlit should access run artifacts through FastAPI endpoints so the storage location can change later without rewriting the UI.
+The UI should not read output files directly from the filesystem. Streamlit should access run state, graph structure, artifacts, events, and final results through FastAPI.
 
-Current primary endpoint:
-
-```text
-GET /bid-runs/{run_id}/result
-```
-
-This returns the final recommendation and includes `output_files` references for traceability.
-
-Recommended future artifact endpoint:
-
-```text
-GET /bid-runs/{run_id}/artifacts/{artifact_name}
-```
-
-Supported artifact names should map to files as follows:
-
-```text
-state
-  -> files/output/bid_runs/{run_id}/run_state.json
-
-events
-  -> files/output/bid_runs/{run_id}/events.jsonl
-
-contract_review_agent
-  -> files/output/bid_runs/{run_id}/contract_review_agent_quote_reviews.json
-
-bid_recommender_agent
-  -> files/output/bid_runs/{run_id}/bid_recommender_agent_decision_result.json
-
-report
-  -> files/output/bid_runs/{run_id}/report.json
-
-telemetry
-  -> files/output/bid_runs/{run_id}/telemetry.json
-```
-
-For the first implementation, the UI can use the existing state/result endpoints:
+Core result access endpoints:
 
 ```text
 GET /bid-runs/{run_id}/state
+GET /bid-runs/{run_id}/graph
 GET /bid-runs/{run_id}/events?since=N
+GET /bid-runs/{run_id}/artifacts
+GET /bid-runs/{run_id}/artifacts/{artifact_id}
 GET /bid-runs/{run_id}/result
 ```
 
-Later, add the artifact endpoint only if the UI needs to display raw agent outputs independently from the final result response.
+Recommended division of responsibility:
+
+```text
+/state
+  Lightweight status snapshot.
+
+/graph
+  Execution nodes and edges for visualization.
+
+/events
+  Timeline and realtime-style updates.
+
+/artifacts
+  Discoverable list of outputs produced by graph nodes.
+
+/artifacts/{artifact_id}
+  Detailed content for one node output.
+
+/result
+  Final business recommendation shortcut.
+```
+
+This makes the API compatible with graph-based execution without requiring a graph engine immediately. The current orchestrator can write a simple fixed graph with dynamic statuses; a future graph runtime can populate the same API shape.
 
 ### Screen 1: Procurement Input
 
@@ -598,10 +767,10 @@ POST /input/scan
 POST /bid-runs
 ```
 
-Output files used:
+Graph/artifact access:
 
 ```text
-None directly.
+None required before a run starts.
 ```
 
 This screen should use input registry APIs and then store `bid_id` and `run_id` in Streamlit session state.
@@ -618,20 +787,24 @@ Backend access:
 
 ```text
 GET /bid-runs/{run_id}/state
-GET /bid-runs/{run_id}/result
+GET /bid-runs/{run_id}/graph
+GET /bid-runs/{run_id}/artifacts
+GET /bid-runs/{run_id}/artifacts/artifact_contract_review
 ```
 
-Primary output artifact:
+Primary node:
 
 ```text
-contract_review_agent_quote_reviews.json
+contract_review
 ```
 
 Recommended UI mapping:
 
-- Contract Review Agent cards should read from `contract_review_agent_quote_reviews.json`.
+- Agent cards should be generated from `/graph.nodes`.
+- Agent connections should be generated from `/graph.edges`.
+- Contract Review Agent details should read from `artifact_contract_review`.
 - Each quote review should show `quote_id`, `vendor_name`, `risk_score`, `risk_level`, findings, and recommendation.
-- Agent status cards should read from `run_state.json` through `GET /bid-runs/{run_id}/state`.
+- Agent status cards should read status from `/state` and `/graph`.
 
 ### Screen 3: Agent Debate Room
 
@@ -642,27 +815,29 @@ Purpose:
 Backend access:
 
 ```text
+GET /bid-runs/{run_id}/graph
+GET /bid-runs/{run_id}/artifacts
 GET /bid-runs/{run_id}/result
 GET /bid-runs/{run_id}/events?since=N
 ```
 
-Current output artifact:
+Current primary node:
 
 ```text
-bid_recommender_agent_decision_result.json
+bid_recommender
 ```
 
 Future output artifacts:
 
 ```text
-agent_debate.json
-decision_board_agent_consensus.json
+artifact_agent_debate
+artifact_decision_board_consensus
 ```
 
 Recommended UI mapping:
 
-- For the first bid workflow, show recommender feedback and ranking rationale from `bid_recommender_agent_decision_result.json`.
-- When a dedicated debate/decision-board step is added, write it to separate agent-named files and expose them through the artifact endpoint.
+- For the first bid workflow, show recommender feedback and ranking rationale from `artifact_bid_recommendation`.
+- When a dedicated debate/decision-board step is added, expose those outputs as artifacts linked to their graph nodes.
 
 ### Screen 4: Executive Dashboard
 
@@ -674,28 +849,34 @@ Backend access:
 
 ```text
 GET /bid-runs/{run_id}/state
+GET /bid-runs/{run_id}/graph
+GET /bid-runs/{run_id}/artifacts
 GET /bid-runs/{run_id}/result
 ```
 
-Primary output artifact:
+Primary nodes:
 
 ```text
-bid_recommender_agent_decision_result.json
+bid_recommender
+contract_review
+decision_logic
 ```
 
-Supporting output artifacts:
+Supporting artifacts:
 
 ```text
-contract_review_agent_quote_reviews.json
-telemetry.json
+artifact_bid_recommendation
+artifact_contract_review
+artifact_telemetry
 ```
 
 Recommended UI mapping:
 
-- Winner and ranked quote table should read from `bid_recommender_agent_decision_result.json`.
-- Quote risk charts should read from `ranked_quotes` and/or `contract_review_agent_quote_reviews.json`.
-- Agent runtime, connection status, and graph state should read from `run_state.json` through `GET /bid-runs/{run_id}/state`.
-- Token, model, latency, and cost metrics should read from `telemetry.json` when implemented.
+- Winner and ranked quote table should read from `/result`.
+- Quote risk charts should read from `artifact_contract_review` or `/result.ranked_quotes`.
+- Agent workflow graph should read from `/graph`.
+- Agent runtime and connection status should read from `/state` and `/events`.
+- Token, model, latency, and cost metrics should read from `artifact_telemetry` when implemented.
 
 ### Screen 5: PreMortem Report
 
@@ -708,13 +889,14 @@ Backend access:
 
 ```text
 GET  /bid-runs/{run_id}/result
+GET  /bid-runs/{run_id}/artifacts
 POST /report/{fmt}
 ```
 
-Current primary output artifact:
+Current primary artifact:
 
 ```text
-bid_recommender_agent_decision_result.json
+artifact_bid_recommendation
 ```
 
 Future report artifacts:
@@ -728,7 +910,7 @@ report.docx
 Recommended UI mapping:
 
 - For the first bid workflow, build the report screen from the final result endpoint.
-- When bid-level report generation is implemented, write `report.json`, `report.pdf`, and `report.docx` into the run folder and expose them through export endpoints.
+- When bid-level report generation is implemented, expose `artifact_report` and export formats through the backend.
 
 ### Bonus Lab: What-If / Digital Twin
 
@@ -742,15 +924,17 @@ Backend access:
 ```text
 POST /bid-runs
 GET  /bid-runs/{run_id}/state
+GET  /bid-runs/{run_id}/graph
+GET  /bid-runs/{run_id}/artifacts
 GET  /bid-runs/{run_id}/result
 GET  /bids/{bid_id}/runs
 ```
 
-Primary output artifacts:
+Primary artifacts:
 
 ```text
-bid_recommender_agent_decision_result.json
-contract_review_agent_quote_reviews.json
+artifact_bid_recommendation
+artifact_contract_review
 ```
 
 Recommended UI mapping:
@@ -758,7 +942,7 @@ Recommended UI mapping:
 - Create a new run for each what-if scenario instead of overwriting the original run.
 - Compare two `run_id` values side by side.
 - Use `GET /bids/{bid_id}/runs` to list previous runs for the same bid.
-- Later, add scenario-specific output files such as `scenario_simulation_agent_results.json`.
+- Later, add a scenario simulation node and expose its output as `artifact_scenario_simulation`.
 
 ## UI Polling Model
 

@@ -159,10 +159,13 @@ The UI should store `run_id` and begin polling run state.
 
 The Bid Analysis Monitor should provide the realtime-style view of the running bid evaluation. For the first implementation, the UI should use REST polling rather than WebSocket.
 
-Frontend API call:
+Frontend API calls:
 
 ```text
 GET /bid-runs/{run_id}/state
+GET /bid-runs/{run_id}/graph
+GET /bid-runs/{run_id}/events?since=N
+GET /bid-runs/{run_id}/artifacts
 ```
 
 Polling interval:
@@ -185,85 +188,84 @@ The UI should render:
 
 This gives a realtime-style experience without adding WebSocket complexity during the demo phase.
 
-The backend state response should include enough information for the UI to render the graph without guessing:
+The UI should treat the run as a graph:
 
 ```json
 {
   "run_id": "RUN-001",
-  "bid_id": "BID-101",
-  "status": "running",
-  "current_step": "reviewing_quote",
-  "agents": {
-    "bid_recommender": {
-      "status": "running",
-      "message": "Comparing submitted quotes"
-    },
-    "contract_review": {
-      "status": "running",
-      "message": "Reviewing BID-101-Q02"
-    },
-    "decision_logic": {
-      "status": "waiting",
-      "message": "Waiting for quote reviews"
-    }
-  },
-  "quotes": [
+  "nodes": [
     {
-      "quote_id": "BID-101-Q01",
-      "vendor_name": "MedNova Healthcare",
-      "status": "completed",
-      "risk_score": 68
+      "id": "bid_recommender",
+      "type": "agent",
+      "label": "Bid Recommender Agent",
+      "status": "running"
     },
     {
-      "quote_id": "BID-101-Q02",
-      "vendor_name": "BudgetMed Systems",
-      "status": "running",
-      "risk_score": null
-    }
-  ],
-  "graph": {
-    "nodes": [
-      {"id": "bid_recommender", "label": "Bid Recommender", "status": "running"},
-      {"id": "contract_review", "label": "Contract Review", "status": "running"},
-      {"id": "decision_logic", "label": "Decision Logic", "status": "waiting"}
-    ],
-    "edges": [
-      {"source": "bid_recommender", "target": "contract_review", "status": "active"},
-      {"source": "contract_review", "target": "bid_recommender", "status": "active"},
-      {"source": "bid_recommender", "target": "decision_logic", "status": "waiting"}
-    ]
-  },
-  "external_connections": [
-    {
-      "id": "openai",
-      "label": "OpenAI API",
-      "status": "active",
-      "latency_ms": 1820
+      "id": "contract_review",
+      "type": "agent",
+      "label": "Contract Review Agent",
+      "status": "completed"
     },
     {
-      "id": "document_store",
-      "label": "Local PDF Store",
+      "id": "llm_provider",
+      "type": "external_connection",
+      "label": "LLM Provider",
       "status": "ok"
     }
   ],
-  "telemetry": {
-    "elapsed_ms": 12000,
-    "llm_calls": 4,
-    "errors": 0
-  }
+  "edges": [
+    {
+      "source": "bid_recommender",
+      "target": "contract_review",
+      "type": "delegates_to",
+      "status": "completed"
+    },
+    {
+      "source": "contract_review",
+      "target": "llm_provider",
+      "type": "uses_external_service",
+      "status": "completed"
+    }
+  ]
 }
 ```
 
-For the first version, the graph can be a fixed workflow with dynamic statuses. The orchestrator should update node and edge states before and after each agent step.
+The UI should treat agent outputs as artifacts:
+
+```json
+{
+  "run_id": "RUN-001",
+  "artifacts": [
+    {
+      "artifact_id": "artifact_contract_review",
+      "node_id": "contract_review",
+      "artifact_type": "quote_reviews",
+      "name": "Contract Review Results",
+      "status": "ready"
+    },
+    {
+      "artifact_id": "artifact_bid_recommendation",
+      "node_id": "bid_recommender",
+      "artifact_type": "decision_result",
+      "name": "Bid Recommendation",
+      "status": "ready"
+    }
+  ]
+}
+```
+
+For the first version, the graph can be a fixed workflow with dynamic statuses. The orchestrator should update node, edge, event, and artifact status before and after each agent step.
 
 ### Final Decision View
 
 When the run state becomes `completed`, the UI should fetch the final result.
 
-Frontend API call:
+Frontend API calls:
 
 ```text
 GET /bid-runs/{run_id}/result
+GET /bid-runs/{run_id}/artifacts
+GET /bid-runs/{run_id}/artifacts/{artifact_id}
 ```
 
 The final decision screen should show:
@@ -273,15 +275,28 @@ The final decision screen should show:
 - Vendor feedback.
 - Reasons for selecting the winner.
 - Reasons for rejecting or downgrading other quotes.
-- Links or references to output artifacts.
+- Links or references to graph artifacts.
 
-Outputs should come from:
+The final decision should use `/result` for the business summary and `/artifacts` for detailed agent outputs. The UI should not read files from:
 
 ```text
 files/output/bid_runs/{run_id}/
 ```
 
-The UI should not mix output files into the input sample folder.
+directly.
+
+Recommended artifact use:
+
+```text
+artifact_bid_recommendation
+  -> final ranking and recommender rationale
+
+artifact_contract_review
+  -> quote-by-quote contract review findings
+
+artifact_telemetry
+  -> model, token, latency, and cost details when implemented
+```
 
 ### Quote Detail View
 
