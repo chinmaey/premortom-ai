@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import BinaryIO, Dict, Iterable, List
 
 
-SAMPLES_DIR = Path(os.getenv("PREMORTEM_SAMPLES_DIR", "files/input/samples"))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SAMPLES_DIR = Path(
+    os.getenv("PREMORTEM_SAMPLES_DIR", REPO_ROOT / "files/input/samples")
+)
 BIDS_DIR = SAMPLES_DIR / "bids"
 BIDS_DATABASE = SAMPLES_DIR / "bids_database.csv"
 

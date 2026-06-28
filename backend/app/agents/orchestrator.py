@@ -126,6 +126,7 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
                 "recommendation": result.recommendation,
             }
             reviews.append(review)
+            bid_outputs.write_contract_reviews(run_id, reviews)
             bid_outputs.update_quote(
                 run_id,
                 quote_id,
@@ -152,6 +153,18 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
                 "Initial demo ranking uses lower contract risk as better.",
                 "Bid Recommender Agent logic can replace this ranking later.",
             ],
+            "output_files": {
+                "contract_review_agent": str(
+                    bid_outputs.BID_RUNS_DIR
+                    / run_id
+                    / bid_outputs.CONTRACT_REVIEW_FILE
+                ),
+                "bid_recommender_agent": str(
+                    bid_outputs.BID_RUNS_DIR
+                    / run_id
+                    / bid_outputs.BID_RECOMMENDER_RESULT_FILE
+                ),
+            },
         }
         bid_outputs.complete_run(run_id, result)
     except Exception as exc:

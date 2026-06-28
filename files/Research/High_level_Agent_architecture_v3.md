@@ -1,4 +1,4 @@
-# High-Level Agent Architecture v2: PreMortem AI
+# High-Level Agent Architecture v3: PreMortem AI
 
 ## 1. Goal
 
@@ -90,6 +90,8 @@ The weekend implementation will focus on a subset of these components while pres
 ```text
 Business Request
       ↓
+UI Guidance Agent / Intake Assistant
+      ↓
 Customer / Requirement Intake Agent
       ↓
 Orchestrator / Manager Agent
@@ -145,7 +147,36 @@ The input layer should eventually support:
 
 ---
 
-### 5.2 Customer / Requirement Intake Agent
+### 5.2 UI Guidance Agent
+
+The UI Guidance Agent is an optional agent-assisted UI layer. It should help the user move through the workflow, but it should not own core storage, orchestration, or final decision logic.
+
+This agent is different from the Streamlit UI itself. The UI remains a deterministic application surface, while the UI Guidance Agent helps users understand what to do next.
+
+Responsibilities:
+
+- Explain the current screen and next action.
+- Help the user create a bid or request-for-quote.
+- Suggest missing bid details or quote-upload requirements.
+- Recommend decision criteria templates.
+- Summarize agent status and run progress in plain business language.
+- Explain bid results and why a quote won or lost.
+- Help the user drill down from bid-level results into quote-level analysis.
+- Ask clarifying questions when the input is incomplete.
+
+The UI Guidance Agent should not:
+
+- Save files directly.
+- Modify `bids_database.csv` or output artifacts directly.
+- Bypass the orchestrator.
+- Make final procurement decisions independently.
+- Dynamically generate arbitrary UI code.
+
+For the first implementation, this can remain a future component. The practical UI should still use deterministic screens for bid intake, quote uploads, run monitoring, results, and quote detail.
+
+---
+
+### 5.3 Customer / Requirement Intake Agent
 
 This agent captures and clarifies the business requirement.
 
@@ -161,7 +192,7 @@ For the weekend demo, this can remain simple or partially mocked.
 
 ---
 
-### 5.3 Orchestrator / Manager Agent
+### 5.4 Orchestrator / Manager Agent
 
 The orchestrator is the central controller of the workflow.
 
@@ -183,7 +214,7 @@ For the next implementation step, the orchestrator can be a lightweight controll
 
 ---
 
-### 5.4 Parallel Execution Layer
+### 5.5 Parallel Execution Layer
 
 This is not a business agent. It is a system layer used by the orchestrator.
 
@@ -200,7 +231,7 @@ This layer helps justify the use of Agentic AI because the system is not just a 
 
 ---
 
-### 5.5 Specialist Agents
+### 5.6 Specialist Agents
 
 Specialist agents should be generic enough to support multiple business workflows, while still allowing domain-specific adapters.
 
@@ -272,7 +303,7 @@ This may be important for government, restricted-domain, or enterprise procureme
 
 ---
 
-### 5.6 Evaluator Agent
+### 5.7 Evaluator Agent
 
 The evaluator reviews the overall quality of the workflow.
 
@@ -291,7 +322,7 @@ This is important because the system should not only generate content; it should
 
 ---
 
-### 5.7 Decision Summary Agent
+### 5.8 Decision Summary Agent
 
 The Decision Summary Agent converts the evaluator-approved outputs into a business-friendly decision package.
 
@@ -310,7 +341,7 @@ Final output should include:
 
 ---
 
-### 5.8 UI Dashboard
+### 5.9 UI Dashboard
 
 The UI should show the agentic workflow, not just the final answer.
 
@@ -327,6 +358,8 @@ Suggested UI sections:
 - Recommended actions
 - Future workflow placeholders
 
+The UI Guidance Agent can sit alongside this dashboard later as an assistant that explains what the dashboard means and recommends the next user action. The dashboard itself should remain deterministic and backed by orchestrator state and output artifacts.
+
 Even if not all workflows are implemented, the UI can show the intended expandable architecture.
 
 ---
@@ -336,6 +369,7 @@ Even if not all workflows are implemented, the UI can show the intended expandab
 The architecture can later include:
 
 - Customer Requirements Interface Agent
+- UI Guidance Agent
 - Internet / External Data Collection Agent
 - Competitor Research Agent
 - Compliance Enforcement Agent

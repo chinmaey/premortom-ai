@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List
 
 
-OUTPUT_DIR = Path(os.getenv("PREMORTEM_OUTPUT_DIR", "files/output"))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+OUTPUT_DIR = Path(os.getenv("PREMORTEM_OUTPUT_DIR", REPO_ROOT / "files/output"))
 BID_RUNS_DIR = OUTPUT_DIR / "bid_runs"
 RUNS_DATABASE = BID_RUNS_DIR / "runs_database.csv"
 
@@ -26,6 +27,11 @@ FIELDNAMES = [
     "llm_provider",
     "model",
 ]
+
+RUN_STATE_FILE = "run_state.json"
+EVENTS_FILE = "events.jsonl"
+CONTRACT_REVIEW_FILE = "contract_review_agent_quote_reviews.json"
+BID_RECOMMENDER_RESULT_FILE = "bid_recommender_agent_decision_result.json"
 
 
 def create_run(bid_id: str, quote_ids: List[str]) -> Dict[str, str]:
@@ -45,7 +51,7 @@ def create_run(bid_id: str, quote_ids: List[str]) -> Dict[str, str]:
     )
     write_run_rows(rows)
     state = _initial_state(run_id, bid_id, quote_ids)
-    write_json(run_dir / "run_state.json", state)
+    write_json(run_dir / RUN_STATE_FILE, state)
     append_event(run_id, "run_queued", {"bid_id": bid_id})
     return {
         "run_id": run_id,
@@ -72,7 +78,7 @@ def complete_run(run_id: str, result: Dict[str, object]) -> None:
         if agent["status"] in {"running", "waiting"}:
             agent["status"] = "completed"
     write_state(run_id, state)
-    result_path = BID_RUNS_DIR / run_id / "decision_result.json"
+    result_path = BID_RUNS_DIR / run_id / BID_RECOMMENDER_RESULT_FILE
     write_json(result_path, result)
     winner = result.get("winner") or {}
     _update_run_row(
@@ -93,6 +99,11 @@ def fail_run(run_id: str, message: str) -> None:
     write_state(run_id, state)
     _update_run_row(run_id, status="failed", completed_at=_now())
     append_event(run_id, "run_failed", {"message": message})
+
+
+def write_contract_reviews(run_id: str, reviews: List[Dict[str, object]]) -> None:
+    path = BID_RUNS_DIR / run_id / CONTRACT_REVIEW_FILE
+    write_json(path, {"run_id": run_id, "quote_reviews": reviews})
 
 
 def update_quote(run_id: str, quote_id: str, status: str, **values: object) -> None:
@@ -117,15 +128,18 @@ def update_agent(run_id: str, agent_id: str, status: str, message: str) -> None:
 
 
 def get_state(run_id: str) -> Dict[str, object]:
-    return read_json(BID_RUNS_DIR / run_id / "run_state.json")
+    return read_json(BID_RUNS_DIR / run_id / RUN_STATE_FILE)
 
 
 def write_state(run_id: str, state: Dict[str, object]) -> None:
-    write_json(BID_RUNS_DIR / run_id / "run_state.json", state)
+    write_json(BID_RUNS_DIR / run_id / RUN_STATE_FILE, state)
 
 
 def get_result(run_id: str) -> Dict[str, object]:
-    result_path = BID_RUNS_DIR / run_id / "decision_result.json"
+    result_path = BID_RUNS_DIR / run_id / BID_RECOMMENDER_RESULT_FILE
+    legacy_path = BID_RUNS_DIR / run_id / "decision_result.json"
+    if not result_path.exists() and legacy_path.exists():
+        result_path = legacy_path
     if not result_path.exists():
         state = get_state(run_id)
         return {
@@ -138,7 +152,7 @@ def get_result(run_id: str) -> Dict[str, object]:
 
 
 def get_events(run_id: str, since: int = 0) -> Dict[str, object]:
-    path = BID_RUNS_DIR / run_id / "events.jsonl"
+    path = BID_RUNS_DIR / run_id / EVENTS_FILE
     events = []
     if path.exists():
         with path.open("r", encoding="utf-8") as f:
@@ -153,7 +167,7 @@ def get_events(run_id: str, since: int = 0) -> Dict[str, object]:
 def append_event(run_id: str, event_type: str, payload: Dict[str, object]) -> None:
     run_dir = BID_RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
-    path = run_dir / "events.jsonl"
+    path = run_dir / EVENTS_FILE
     event_id = 1
     if path.exists():
         with path.open("r", encoding="utf-8") as f:
