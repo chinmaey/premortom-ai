@@ -15,6 +15,7 @@ from ..models import AgentResult, PreMortemReport, ProcurementInput
 from ..services import bid_outputs, document_parser, input_bids
 from ..services.debate import build_debate
 from . import (
+    bid_recommender_agent,
     contract_agent,
     decision_board,
     financial_agent,
@@ -84,9 +85,8 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
     """Evaluate a bid run and persist status for the UI.
 
     This is the first backend skeleton for the bid workflow. It uses the
-    existing Contract Risk Agent for per-quote review and ranks lower-risk
-    quotes higher. Later, the Bid Recommender Agent can replace the ranking
-    logic while keeping the same run-state API.
+    existing Contract Risk Agent for per-quote review, then asks the Bid
+    Recommender Agent to rank quotes and produce the decision artifact.
     """
     try:
         bid_outputs.set_running(run_id)
@@ -181,28 +181,21 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
 
         bid_outputs.update_agent(
             run_id,
-            "decision_logic",
+            "bid_recommender",
             "running",
-            "Ranking reviewed quotes",
+            "Comparing reviewed quotes",
         )
-        ranked = sorted(reviews, key=lambda item: item["risk_score"])
-        winner = ranked[0] if ranked else {}
-        result = {
-            "run_id": run_id,
-            "bid_id": bid_id,
-            "status": "completed",
-            "winner": winner,
-            "ranked_quotes": ranked,
-            "feedback": [
-                "Initial demo ranking uses lower contract risk as better.",
-                "Bid Recommender Agent logic can replace this ranking later.",
-            ],
-            "artifact_refs": [
-                "artifact_vendor_proposal",
-                "artifact_bid_recommendation",
-                "artifact_contract_review",
-            ],
-        }
+        result = bid_recommender_agent.recommend(
+            run_id=run_id,
+            bid_id=bid_id,
+            reviews=reviews,
+        )
+        bid_outputs.update_agent(
+            run_id,
+            "decision_logic",
+            "completed",
+            "Recommendation prepared",
+        )
         bid_outputs.complete_run(run_id, result)
     except Exception as exc:
         bid_outputs.fail_run(run_id, str(exc))
