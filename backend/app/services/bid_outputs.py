@@ -30,6 +30,7 @@ FIELDNAMES = [
 
 RUN_STATE_FILE = "run_state.json"
 EVENTS_FILE = "events.jsonl"
+VENDOR_PROPOSAL_FILE = "vendor_proposal_agent_quote_intelligence.json"
 CONTRACT_REVIEW_FILE = "contract_review_agent_quote_reviews.json"
 BID_RECOMMENDER_RESULT_FILE = "bid_recommender_agent_decision_result.json"
 
@@ -45,6 +46,12 @@ ARTIFACTS = {
         "artifact_type": "events",
         "name": "Run Events",
         "filename": EVENTS_FILE,
+    },
+    "artifact_vendor_proposal": {
+        "node_id": "vendor_proposal",
+        "artifact_type": "proposal_intelligence",
+        "name": "Vendor Proposal Intelligence",
+        "filename": VENDOR_PROPOSAL_FILE,
     },
     "artifact_contract_review": {
         "node_id": "contract_review",
@@ -131,6 +138,11 @@ def fail_run(run_id: str, message: str) -> None:
 def write_contract_reviews(run_id: str, reviews: List[Dict[str, object]]) -> None:
     path = BID_RUNS_DIR / run_id / CONTRACT_REVIEW_FILE
     write_json(path, {"run_id": run_id, "quote_reviews": reviews})
+
+
+def write_vendor_proposals(run_id: str, proposals: List[Dict[str, object]]) -> None:
+    path = BID_RUNS_DIR / run_id / VENDOR_PROPOSAL_FILE
+    write_json(path, {"run_id": run_id, "quotes": proposals})
 
 
 def update_quote(run_id: str, quote_id: str, status: str, **values: object) -> None:
@@ -271,6 +283,17 @@ def list_runs_for_bid(bid_id: str) -> Dict[str, object]:
     }
 
 
+def get_latest_run_for_bid(bid_id: str) -> Dict[str, str]:
+    runs = [row for row in read_run_rows() if row["bid_id"] == bid_id]
+    if not runs:
+        raise KeyError(f"No runs found for bid_id: {bid_id}")
+    return sorted(
+        runs,
+        key=lambda row: row.get("started_at") or row.get("completed_at") or "",
+        reverse=True,
+    )[0]
+
+
 def read_run_rows() -> List[Dict[str, str]]:
     if not RUNS_DATABASE.exists():
         return []
@@ -312,6 +335,7 @@ def _initial_state(run_id: str, bid_id: str, quote_ids: List[str]) -> Dict[str, 
         "quotes": [{"quote_id": quote_id, "status": "pending"} for quote_id in quote_ids],
         "graph": {
             "nodes": [
+                {"id": "vendor_proposal", "type": "agent", "label": "Vendor Proposal", "status": "waiting"},
                 {"id": "bid_recommender", "type": "agent", "label": "Bid Recommender", "status": "waiting"},
                 {"id": "contract_review", "type": "agent", "label": "Contract Review", "status": "waiting"},
                 {"id": "decision_logic", "type": "decision_step", "label": "Decision Logic", "status": "waiting"},
@@ -319,6 +343,8 @@ def _initial_state(run_id: str, bid_id: str, quote_ids: List[str]) -> Dict[str, 
                 {"id": "llm_provider", "type": "external_connection", "label": "LLM Provider", "status": "pending"},
             ],
             "edges": [
+                {"source": "vendor_proposal", "target": "contract_review", "type": "passes_results_to", "status": "waiting"},
+                {"source": "vendor_proposal", "target": "bid_recommender", "type": "passes_results_to", "status": "waiting"},
                 {"source": "bid_recommender", "target": "contract_review", "type": "delegates_to", "status": "waiting"},
                 {"source": "contract_review", "target": "bid_recommender", "type": "returns_result_to", "status": "waiting"},
                 {"source": "bid_recommender", "target": "decision_logic", "type": "passes_results_to", "status": "waiting"},

@@ -147,3 +147,33 @@ def list_bid_runs(bid_id: str) -> dict:
     r = requests.get(f"{API_BASE}/bids/{bid_id}/runs", timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()
+
+
+def get_latest_bid_run(bid_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bids/{bid_id}/latest-run", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_latest_bid_run_state(bid_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bids/{bid_id}/latest-state", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_latest_bid_run_graph(bid_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bids/{bid_id}/latest-graph", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def list_latest_bid_run_artifacts(bid_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bids/{bid_id}/latest-artifacts", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_latest_bid_run_result(bid_id: str) -> dict:
+    r = requests.get(f"{API_BASE}/bids/{bid_id}/latest-result", timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()

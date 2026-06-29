@@ -98,10 +98,17 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
         )
         quote_rows = input_bids.get_quote_rows(bid_id, quote_ids)
         reviews = []
+        vendor_proposals = []
 
         for quote in quote_rows:
             quote_id = quote["quote_id"]
             bid_outputs.update_quote(run_id, quote_id, "running")
+            bid_outputs.update_agent(
+                run_id,
+                "vendor_proposal",
+                "running",
+                f"Extracting proposal text for {quote_id}",
+            )
             bid_outputs.update_agent(
                 run_id,
                 "contract_review",
@@ -111,6 +118,43 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
             pdf_path = input_bids.SAMPLES_DIR / quote["pdf_path"]
             content = pdf_path.read_bytes()
             text = document_parser.extract_text(pdf_path.name, content)
+            vendor_proposals.append(
+                {
+                    "quote_id": quote_id,
+                    "fixed_features": {
+                        "vendor_name": {
+                            "value": quote.get("vendor_name", ""),
+                            "status": "found" if quote.get("vendor_name") else "missing",
+                            "confidence": 1.0 if quote.get("vendor_name") else 0.0,
+                            "evidence": "bids_database.csv",
+                        },
+                        "equipment_type": {
+                            "value": quote.get("equipment_type", ""),
+                            "status": "found" if quote.get("equipment_type") else "missing",
+                            "confidence": 1.0 if quote.get("equipment_type") else 0.0,
+                            "evidence": "bids_database.csv",
+                        },
+                    },
+                    "proposal_text": {
+                        "raw_text": text,
+                        "text_preview": text[:2000],
+                        "char_count": len(text),
+                        "source_pdf_path": str(pdf_path),
+                    },
+                    "proposal_intelligence": {},
+                    "raw_text_reference": {
+                        "pdf_path": quote["pdf_path"],
+                        "full_text_available": bool(text),
+                    },
+                }
+            )
+            bid_outputs.write_vendor_proposals(run_id, vendor_proposals)
+            bid_outputs.update_agent(
+                run_id,
+                "vendor_proposal",
+                "completed",
+                f"Proposal text extracted for {quote_id}",
+            )
             data = ProcurementInput(
                 procurement_name=quote.get("procurement_name") or bid_id,
                 equipment_type=quote.get("equipment_type") or "Medical Equipment",
@@ -154,6 +198,7 @@ def run_bid_evaluation(run_id: str, bid_id: str, quote_ids: List[str]) -> None:
                 "Bid Recommender Agent logic can replace this ranking later.",
             ],
             "artifact_refs": [
+                "artifact_vendor_proposal",
                 "artifact_bid_recommendation",
                 "artifact_contract_review",
             ],

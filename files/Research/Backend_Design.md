@@ -618,6 +618,7 @@ Response:
 Recommended first artifact IDs:
 
 ```text
+artifact_vendor_proposal
 artifact_contract_review
 artifact_bid_recommendation
 artifact_run_state
@@ -625,6 +626,146 @@ artifact_events
 artifact_telemetry
 artifact_report
 ```
+
+## Vendor Proposal Artifact Schema
+
+The Vendor / Proposal Understanding and External Risk Agent should produce a reusable proposal artifact for each quote. This artifact is the shared input for Contract Review, Cost Benchmark, Compliance, Vendor Risk, Bid Recommendation, and Evaluator agents.
+
+Recommended artifact:
+
+```text
+artifact_vendor_proposal
+```
+
+Recommended file name:
+
+```text
+vendor_proposal_agent_quote_intelligence.json
+```
+
+The output should put fixed comparable fields first. All later sections are optional and can be added incrementally without breaking existing consumers.
+
+```text
+fixed_features
+proposal_text
+proposal_intelligence
+raw_text_reference
+```
+
+### fixed_features
+
+`fixed_features` contains comparable fields used for fair quote comparison. These fields should be stable and should not be freely selected by the LLM.
+
+Each fixed feature should include:
+
+```json
+{
+  "value": null,
+  "status": "found | missing | unclear | conflicting | inferred | not_applicable",
+  "confidence": 0.0,
+  "evidence": ""
+}
+```
+
+Recommended first fixed fields:
+
+```text
+vendor_name
+company_legal_name
+registered_address
+contact_person
+contact_email
+contact_phone
+years_in_operation
+similar_hospital_references
+equipment_type
+offered_solution_summary
+contract_value_cr
+currency
+advance_payment_pct
+delivery_timeline_months
+warranty_start
+warranty_duration_months
+installation_responsibility
+training_included
+service_response_hours
+local_service_team
+spare_parts_commitment
+uptime_commitment
+compliance_claims
+certifications
+regulatory_approvals
+implementation_plan
+acceptance_testing_terms
+penalty_or_liquidated_damages
+exclusions_or_assumptions
+payment_milestones
+```
+
+These include the important fields previously represented in `ProcurementInput` and the synthetic quote metadata, while adding proposal-specific fields needed for real vendor quote review.
+
+### proposal_text
+
+`proposal_text` contains the extracted source text from the vendor PDF. It should be treated as source material, not as interpreted intelligence.
+
+Recommended fields:
+
+```text
+raw_text
+text_preview
+char_count
+source_pdf_path
+```
+
+This section is optional for long documents. For small demo PDFs, storing `raw_text` inline is acceptable. For production-scale documents, store raw text once and use `raw_text_reference` plus evidence snippets.
+
+### proposal_intelligence
+
+`proposal_intelligence` contains agent-interpreted signals. These should be evidence-backed, but they are not the same as objective fixed features.
+
+Recommended first fields:
+
+```text
+vendor_emphasis
+missing_information
+extra_information
+unusual_terms
+evidence_quality
+marketing_vs_specificity
+implementation_specificity
+positive_differentiators
+risk_flags
+vendor_maturity_signal
+follow_up_questions
+```
+
+This section captures information that humans naturally use when judging proposals:
+
+- what the vendor emphasizes
+- what the vendor avoids saying
+- whether implementation details are specific
+- whether claims are evidence-backed
+- whether the proposal is mostly marketing
+- whether unusual conditions exist
+- whether differentiators are relevant
+- whether the vendor seems mature or vague
+- what must be clarified before award
+
+### raw_text_reference
+
+`raw_text_reference` preserves traceability without forcing every downstream artifact to duplicate the full PDF text.
+
+Recommended fields:
+
+```text
+pdf_path
+raw_text_path
+full_text_available
+text_excerpt_refs
+source_page_refs
+```
+
+Longer term, store raw extracted text once and pass references plus evidence snippets to downstream agents.
 
 ### Get Run Artifact
 
