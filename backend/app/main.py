@@ -210,3 +210,47 @@ def get_bid_run_result(run_id: str):
 @app.get("/bids/{bid_id}/runs")
 def list_bid_runs(bid_id: str):
     return bid_outputs.list_runs_for_bid(bid_id)
+
+
+@app.get("/bids/{bid_id}/latest-run")
+def get_latest_bid_run(bid_id: str):
+    try:
+        return bid_outputs.get_latest_run_for_bid(bid_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/bids/{bid_id}/latest-state")
+def get_latest_bid_run_state(bid_id: str):
+    try:
+        run = bid_outputs.get_latest_run_for_bid(bid_id)
+        return bid_outputs.get_state(run["run_id"])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/bids/{bid_id}/latest-graph")
+def get_latest_bid_run_graph(bid_id: str):
+    try:
+        run = bid_outputs.get_latest_run_for_bid(bid_id)
+        return bid_outputs.get_graph(run["run_id"])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/bids/{bid_id}/latest-artifacts")
+def list_latest_bid_run_artifacts(bid_id: str):
+    try:
+        run = bid_outputs.get_latest_run_for_bid(bid_id)
+        return bid_outputs.list_artifacts(run["run_id"])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/bids/{bid_id}/latest-result")
+def get_latest_bid_run_result(bid_id: str):
+    try:
+        run = bid_outputs.get_latest_run_for_bid(bid_id)
+        return bid_outputs.get_result(run["run_id"])
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
