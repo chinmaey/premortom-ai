@@ -3,11 +3,19 @@ from __future__ import annotations
 
 from ..models import AgentResult, ProcurementInput
 from ..services.llm import has_api_key, run_agent_llm
-from ..services.prompts import load_prompt
+from ..services.prompts import load_okf_memory, load_prompt
 from .base import clamp, risk_level
 
 NAME = "Contract Risk Agent"
-INSTRUCTIONS = load_prompt("contract_agent")
+BASE_INSTRUCTIONS = load_prompt("contract_agent")
+OKF_MEMORY = load_okf_memory()
+INSTRUCTIONS = (
+    f"{BASE_INSTRUCTIONS}\n\n"
+    "# OKF long-term memory\n"
+    f"{OKF_MEMORY}\n"
+    if OKF_MEMORY
+    else BASE_INSTRUCTIONS
+)
 
 
 def analyze(data: ProcurementInput) -> AgentResult:

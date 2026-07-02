@@ -130,6 +130,12 @@ technicians hired, warranty revised to commissioning date.
 
 ---
 
+## References
+
+- [OKF SPEC.md](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+
+---
+
 ## Project Layout
 
 ```
