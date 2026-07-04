@@ -557,6 +557,56 @@ Review whether installation, calibration, acceptance testing, warranty, service 
 
 The Contract Review Agent does not automatically receive the entire knowledge folder. The system should load core memory plus a small number of relevant topic files.
 
+#### Current Implementation Note: Single-Pass OKF Memory Prompt
+
+The current backend implementation is an early version of this memory design.
+It uses `OKF_MEMORY_ROOT` to point the Contract Review Agent at the OKF-style
+profile folder under:
+
+```text
+backend/agent_profiles/contract_agent_profile/
+```
+
+At startup, the backend loads a compact bundle from:
+
+```text
+index.md
+profile.md
+policies/*.md
+patterns/*.md
+```
+
+That bundle is appended to the base contract-agent prompt before the LLM call.
+The resulting flow is currently:
+
+```text
+base contract prompt
+  + loaded OKF profile/policy/pattern bundle
+  + current procurement or quote text
+  -> Contract Review Agent result
+```
+
+This means the OKF `index.md` gives the model guidance about how to use memory,
+but the code does not yet perform clause-level filtering before prompt
+construction. The LLM receives the loaded bundle and chooses which guidance is
+relevant while producing the final answer.
+
+This is better described as a **single-pass OKF memory prompt**, not as
+one-shot prompting. One-shot and few-shot prompting refer to how many examples
+are included in a prompt. Here, single-pass means the backend sends one final
+analysis prompt instead of first running a separate memory-selection step.
+
+TODO: investigate how OKF memory filtering should happen before prompt
+construction. Candidate approaches:
+
+- Rule-based selector using metadata, triggers, and keywords.
+- Vector selector using Chroma or pgvector to retrieve relevant OKF chunks.
+- Two-step selector where the model first reads the OKF index/frontmatter and
+  returns selected memory paths as structured JSON, then the orchestrator builds
+  a refined prompt from only those files.
+- Hybrid selector that uses rules or vector retrieval to shortlist memory and a
+  model or deterministic reranker to validate the final selection.
+
 ### 6.2 Contract Review Agent Memory Example
 
 For the Contract Review Agent, long-term memory should contain:
