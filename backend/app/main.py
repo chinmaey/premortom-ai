@@ -10,6 +10,8 @@ GET  /sample                 - the AIIMS MRI demo input
 """
 from __future__ import annotations
 
+import os
+
 from pydantic import BaseModel
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,6 +22,7 @@ from .agents.orchestrator import run_bid_evaluation, run_premortem
 from .models import PreMortemReport, ProcurementInput
 from .services import bid_outputs, document_parser, input_bids, report as report_service
 from .services.llm import has_api_key
+from .services.okf_memory import write_okf_memory_index
 
 app = FastAPI(
     title="PreMortem AI",
@@ -43,6 +46,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def write_memory_indexes_on_startup() -> None:
+    if os.getenv("OKF_WRITE_MEMORY_INDEX", "0") not in {"1", "true", "True"}:
+        return
+    write_okf_memory_index()
 
 
 @app.get("/health")

@@ -82,7 +82,9 @@ python -m venv .venv && . .venv/Scripts/activate   # Windows
 # source .venv/bin/activate                         # macOS/Linux
 pip install -r requirements.txt
 export OKF_MEMORY_ROOT="$PWD/agent_profiles/contract_agent_profile"  # macOS/Linux
+export OKF_WRITE_MEMORY_INDEX=1                                      # macOS/Linux
 # set OKF_MEMORY_ROOT=%CD%\agent_profiles\contract_agent_profile   # Windows cmd
+# set OKF_WRITE_MEMORY_INDEX=1                                      # Windows cmd
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -102,8 +104,10 @@ streamlit run app.py
 The backend and frontend load `../.env` automatically for local runs. Values
 already exported in your shell or provided by Docker still take precedence.
 `OKF_MEMORY_ROOT` enables the contract agent's durable memory bundle during
-backend runs. If it is omitted, the app still runs with the normal offline/LLM
-fallback behavior.
+backend runs. `OKF_WRITE_MEMORY_INDEX=1` writes a plain-text metadata index to
+`backend/agent_profiles/contract_agent_profile/contract_agent_memory_index.json`
+on backend startup. If these values are omitted, the app still runs with the
+normal offline/LLM fallback behavior.
 
 Open http://localhost:8501, click **Load AIIMS MRI demo**, then **Run PreMortem**.
 

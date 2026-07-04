@@ -607,6 +607,65 @@ construction. Candidate approaches:
 - Hybrid selector that uses rules or vector retrieval to shortlist memory and a
   model or deterministic reranker to validate the final selection.
 
+#### Incremental Storage Plan
+
+The OKF Markdown folder remains the source of truth. The first implementation
+does not need a vector database or one JSON file per agent. Instead, the backend
+can parse OKF files into JSON-like chunk objects in memory at startup:
+
+```json
+{
+  "agent_id": "contract_agent",
+  "source_path": "policies/warranty.md",
+  "memory_type": "policy",
+  "tags": ["warranty", "commissioning"],
+  "content": "Plain-text OKF clause or section..."
+}
+```
+
+The selector can filter these in-memory chunks by `agent_id`, path, tags,
+triggers, and keyword matches. The selected `content` is then inserted into the
+LLM prompt as plain text.
+
+If debugging or inspection is needed, the backend may generate a local index
+file such as:
+
+```text
+backend/agent_profiles/contract_agent_profile/contract_agent_memory_index.json
+```
+
+This file should contain parsed metadata and plain-text chunks, not embeddings.
+It should not be called `vectors.json` until real embedding vectors are stored.
+
+When vector retrieval is added later, use one shared pgvector-enabled Postgres
+database rather than one vector database per agent. Agent separation should be
+handled with an `agent_id` or namespace column:
+
+```sql
+CREATE TABLE agent_memory_chunks (
+  id text PRIMARY KEY,
+  agent_id text NOT NULL,
+  source_path text NOT NULL,
+  memory_type text NOT NULL,
+  tags jsonb,
+  content text NOT NULL,
+  embedding vector(384)
+);
+```
+
+Each agent retrieves only its own memory:
+
+```sql
+SELECT *
+FROM agent_memory_chunks
+WHERE agent_id = 'contract_agent'
+ORDER BY embedding <-> :query_embedding
+LIMIT 5;
+```
+
+This keeps the architecture modular while avoiding separate storage systems for
+each agent.
+
 ### 6.2 Contract Review Agent Memory Example
 
 For the Contract Review Agent, long-term memory should contain:

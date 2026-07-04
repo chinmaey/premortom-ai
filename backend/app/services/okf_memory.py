@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -21,6 +22,7 @@ DEFAULT_OKF_MEMORY_ROOT = (
 
 @dataclass(frozen=True)
 class OkfMemoryChunk:
+    agent_id: str
     source_path: str
     memory_type: str
     tags: tuple[str, ...]
@@ -37,7 +39,7 @@ def resolve_okf_memory_root() -> Path | None:
 
 
 @lru_cache(maxsize=1)
-def load_okf_chunks() -> tuple[OkfMemoryChunk, ...]:
+def load_okf_chunks(agent_id: str = "contract_agent") -> tuple[OkfMemoryChunk, ...]:
     """Load OKF markdown files as selectable memory chunks."""
     root = resolve_okf_memory_root()
     if root is None:
@@ -55,17 +57,21 @@ def load_okf_chunks() -> tuple[OkfMemoryChunk, ...]:
             continue
         paths.extend(path for path in sorted(folder.glob("*.md")) if path.name != "index.md")
 
-    return tuple(_load_chunk(root, path) for path in paths)
+    return tuple(_load_chunk(root, path, agent_id) for path in paths)
 
 
-def select_okf_memory(query_text: str, max_chunks: int = 10) -> str:
+def select_okf_memory(
+    query_text: str,
+    agent_id: str = "contract_agent",
+    max_chunks: int = 10,
+) -> str:
     """Return a compact memory block relevant to the current input.
 
     The core index/profile chunks are always included. Policy/pattern chunks are
     selected with simple deterministic keyword rules. This avoids sending every
     memory file while keeping the current flow to one final LLM call.
     """
-    chunks = load_okf_chunks()
+    chunks = tuple(chunk for chunk in load_okf_chunks(agent_id) if chunk.agent_id == agent_id)
     if not chunks:
         return ""
 
@@ -92,11 +98,40 @@ def select_okf_memory(query_text: str, max_chunks: int = 10) -> str:
     return "\n\n".join(_format_chunk(chunk) for chunk in selected).strip()
 
 
-def _load_chunk(root: Path, path: Path) -> OkfMemoryChunk:
+def write_okf_memory_index(
+    output_path: Path | None = None,
+    agent_id: str = "contract_agent",
+) -> Path | None:
+    """Write a debug JSON index of parsed OKF chunks.
+
+    The file contains plain text and metadata only, not embedding vectors.
+    """
+    root = resolve_okf_memory_root()
+    if root is None:
+        return None
+
+    path = output_path or root / f"{agent_id}_memory_index.json"
+    chunks = load_okf_chunks(agent_id)
+    payload = [
+        {
+            "agent_id": chunk.agent_id,
+            "source_path": chunk.source_path,
+            "memory_type": chunk.memory_type,
+            "tags": list(chunk.tags),
+            "content": chunk.content,
+        }
+        for chunk in chunks
+    ]
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return path
+
+
+def _load_chunk(root: Path, path: Path, agent_id: str) -> OkfMemoryChunk:
     raw = path.read_text(encoding="utf-8").strip()
     metadata, body = _split_frontmatter(raw)
     rel = path.relative_to(root).as_posix()
     return OkfMemoryChunk(
+        agent_id=agent_id,
         source_path=rel,
         memory_type=_memory_type(rel, metadata.get("type", "")),
         tags=tuple(_metadata_list(metadata.get("tags", ""))),
