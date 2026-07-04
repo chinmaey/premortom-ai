@@ -480,7 +480,389 @@ Even if not all workflows are implemented, the UI can show the intended expandab
 
 ---
 
-## 6. Additional Future Agents
+## 6. Memory Architecture
+
+The agent platform should separate memory into three layers. This prevents the agents from mixing stable operating knowledge, temporary case context, and long-term decision history.
+
+The three memory layers are:
+
+1. **Long-term agent memory**
+   - Stable knowledge that defines how an agent behaves.
+   - Stored as human-readable Markdown files using an OKF-style knowledge structure.
+   - Version-controlled, curated, and easy for the team to inspect.
+   - Loaded selectively into prompts rather than sending every knowledge file every time.
+
+2. **Short-term working memory**
+   - Temporary context for the current review or recent decision window.
+   - Includes current procurement inputs, uploaded document excerpts, intermediate findings, and relevant retrieved snippets.
+   - Can use vector search or a cache-like retrieval layer when the system needs to find relevant context within a bounded range.
+   - Should stay small so older decisions do not over-influence the current review.
+
+3. **Decision history**
+   - Long-term record of prior reviews, outcomes, risk scores, evidence, human decisions, and later actual results.
+   - Stored in a database or vector-enabled store, but not automatically injected into every agent prompt.
+   - Used like a database plus cache: searchable when needed, but not always present in the agent's working context.
+   - Supports audit, analytics, similarity search, and later learning loops.
+
+### 6.1 Long-Term Memory Using OKF-Style Markdown
+
+The long-term memory should be the agent's stable operating manual. For the Contract Review Agent, this can start with a file such as:
+
+```text
+backend/app/knowledge/
+  contract_agent/
+    contract_agent_profile.md
+    risk_rubric.md
+    bias_controls.md
+    clause_guidance.md
+    red_flags/
+      scope_ambiguity.md
+      weak_penalty_clause.md
+      vendor_lockin.md
+      unclear_acceptance.md
+      single_bid.md
+    sectors/
+      medical_equipment.md
+      construction.md
+      software.md
+```
+
+The core files are always useful for the Contract Review Agent:
+
+- `contract_agent_profile.md`
+- `risk_rubric.md`
+- `bias_controls.md`
+
+Topic-specific files should be loaded only when relevant to the current case. For example, an MRI procurement with installation, calibration, warranty, and training obligations may load:
+
+- `sectors/medical_equipment.md`
+- `red_flags/unclear_acceptance.md`
+- `red_flags/weak_penalty_clause.md`
+- `red_flags/vendor_lockin.md`
+
+The Markdown files can include simple metadata to support retrieval:
+
+```md
+---
+agent: contract
+topics: [medical_equipment, installation, calibration, warranty]
+triggers: [MRI, medical equipment, calibration, installation, training, warranty]
+priority: high
+---
+
+# Medical Equipment Contract Risks
+
+Review whether installation, calibration, acceptance testing, warranty, service response, and training responsibilities are explicitly assigned.
+```
+
+The Contract Review Agent does not automatically receive the entire knowledge folder. The system should load core memory plus a small number of relevant topic files.
+
+#### Current Implementation Note: Single-Pass OKF Memory Prompt
+
+The current backend implementation is an early version of this memory design.
+It uses `OKF_MEMORY_ROOT` to point the Contract Review Agent at the OKF-style
+profile folder under:
+
+```text
+backend/agent_profiles/contract_agent_profile/
+```
+
+At startup, the backend loads a compact bundle from:
+
+```text
+index.md
+profile.md
+policies/*.md
+patterns/*.md
+```
+
+That bundle is appended to the base contract-agent prompt before the LLM call.
+The resulting flow is currently:
+
+```text
+base contract prompt
+  + loaded OKF profile/policy/pattern bundle
+  + current procurement or quote text
+  -> Contract Review Agent result
+```
+
+This means the OKF `index.md` gives the model guidance about how to use memory,
+but the code does not yet perform clause-level filtering before prompt
+construction. The LLM receives the loaded bundle and chooses which guidance is
+relevant while producing the final answer.
+
+This is better described as a **single-pass OKF memory prompt**, not as
+one-shot prompting. One-shot and few-shot prompting refer to how many examples
+are included in a prompt. Here, single-pass means the backend sends one final
+analysis prompt instead of first running a separate memory-selection step.
+
+TODO: investigate how OKF memory filtering should happen before prompt
+construction. Candidate approaches:
+
+- Rule-based selector using metadata, triggers, and keywords.
+- Vector selector using Chroma or pgvector to retrieve relevant OKF chunks.
+- Two-step selector where the model first reads the OKF index/frontmatter and
+  returns selected memory paths as structured JSON, then the orchestrator builds
+  a refined prompt from only those files.
+- Hybrid selector that uses rules or vector retrieval to shortlist memory and a
+  model or deterministic reranker to validate the final selection.
+
+#### Incremental Storage Plan
+
+The OKF Markdown folder remains the source of truth. The first implementation
+does not need a vector database or one JSON file per agent. Instead, the backend
+can parse OKF files into JSON-like chunk objects in memory at startup:
+
+```json
+{
+  "agent_id": "contract_agent",
+  "source_path": "policies/warranty.md",
+  "memory_type": "policy",
+  "tags": ["warranty", "commissioning"],
+  "content": "Plain-text OKF clause or section..."
+}
+```
+
+The selector can filter these in-memory chunks by `agent_id`, path, tags,
+triggers, and keyword matches. The selected `content` is then inserted into the
+LLM prompt as plain text.
+
+If debugging or inspection is needed, the backend may generate a local index
+file such as:
+
+```text
+backend/agent_profiles/contract_agent_profile/contract_agent_memory_index.json
+```
+
+This file should contain parsed metadata and plain-text chunks, not embeddings.
+It should not be called `vectors.json` until real embedding vectors are stored.
+
+When vector retrieval is added later, use one shared pgvector-enabled Postgres
+database rather than one vector database per agent. Agent separation should be
+handled with an `agent_id` or namespace column:
+
+```sql
+CREATE TABLE agent_memory_chunks (
+  id text PRIMARY KEY,
+  agent_id text NOT NULL,
+  source_path text NOT NULL,
+  memory_type text NOT NULL,
+  tags jsonb,
+  content text NOT NULL,
+  embedding vector(384)
+);
+```
+
+Each agent retrieves only its own memory:
+
+```sql
+SELECT *
+FROM agent_memory_chunks
+WHERE agent_id = 'contract_agent'
+ORDER BY embedding <-> :query_embedding
+LIMIT 5;
+```
+
+This keeps the architecture modular while avoiding separate storage systems for
+each agent.
+
+Current pgvector implementation note: the first pgvector version can use a
+small deterministic local feature vector to wire the storage and retrieval flow
+without a paid embedding API or new ML dependency. This proves the architecture:
+
+```text
+OKF Markdown
+  -> parsed memory chunks
+  -> local feature vector
+  -> shared pgvector table
+  -> retrieved plain-text chunks
+  -> LLM prompt
+```
+
+Later, replace the temporary local feature vector with a stronger local
+embedding model such as SentenceTransformers, while keeping the same table and
+retrieval interface.
+
+### 6.2 Contract Review Agent Memory Example
+
+For the Contract Review Agent, long-term memory should contain:
+
+- Agent role and boundaries.
+- Expected inputs and outputs.
+- Risk scoring rubric.
+- Contract red flags.
+- Clause review guidance.
+- Bias controls.
+- Curated lessons from reviewed historical cases.
+
+Example content for `contract_agent_profile.md`:
+
+```md
+# Contract Risk Agent Profile
+
+## Role
+Assess contract-related procurement failure risk before approval.
+
+## Inputs
+Use procurement description, budget, timeline, vendor details, uploaded contract or quote text, and relevant outputs from other agents.
+
+## Outputs
+Return risk score, findings, reasoning, evidence references, mitigation suggestions, follow-up questions, and confidence.
+
+## Boundaries
+Do not make legal conclusions. Identify procurement execution risk.
+Do not assess infrastructure readiness unless contract terms directly affect it.
+Do not treat missing information as proof of failure.
+
+## Bias Controls
+Do not penalize large projects only because they are large.
+Do not assume a new vendor is weak without evidence.
+Do not copy risk scores from historical examples.
+Separate probability of failure from financial exposure.
+```
+
+The prompt should then be assembled from selected memory:
+
+```text
+SYSTEM:
+You are the Contract Review Agent.
+
+CORE MEMORY:
+[contract_agent_profile.md]
+[risk_rubric.md]
+[bias_controls.md]
+
+RELEVANT MEMORY:
+[medical_equipment.md]
+[weak_penalty_clause.md]
+[unclear_acceptance.md]
+
+CURRENT CASE:
+[procurement input + extracted document text + relevant other-agent findings]
+
+TASK:
+Analyze contract-related risks and return structured AgentResult JSON.
+```
+
+### 6.3 Short-Term Working Memory
+
+Short-term memory should represent the current case and a bounded recent context window. It should include:
+
+- Current procurement input.
+- Raw extracted document text or selected excerpts.
+- Intermediate observations from the current run.
+- Other specialist agent outputs needed by the Contract Review Agent.
+- Relevant retrieved snippets from a recent range or cache.
+- Missing information and follow-up questions.
+
+This memory should be intentionally small. Old decisions should not directly influence every new review. Instead, recent or similar cases can be retrieved only when the retriever decides they are relevant.
+
+Vector search can be useful for short-term or range-bounded retrieval when the question is semantic, such as:
+
+```text
+Find recent contract reviews with similar vague installation responsibility.
+```
+
+Text search can be better for exact needles, such as:
+
+```text
+Find cases mentioning "liquidated damages" or "single bid".
+```
+
+The practical design can use hybrid retrieval:
+
+```text
+Current case
+  -> keyword filters and metadata filters
+  -> optional vector similarity over bounded recent cases
+  -> selected snippets
+  -> agent prompt
+```
+
+### 6.4 Decision History
+
+Decision history is not the same as prompt memory. It should be treated as a long-term evidence store.
+
+Decision history should capture:
+
+- Case ID.
+- Date and time.
+- Procurement input.
+- Uploaded document metadata.
+- Extracted document text or document references.
+- Agent outputs and risk scores.
+- Final recommendation.
+- Human decision or override.
+- Actual outcome when known.
+- Delay, failure, or success labels.
+- Model/provider used.
+- Version of the agent memory or rubric used.
+
+This can be stored in a database or vector-enabled store. The important rule is that the agent should not access all decision history all the time. It should query decision history only when needed, similar to how an application uses a database and cache.
+
+For example:
+
+```text
+Decision history database
+  -> exact filters by date, department, vendor, contract type, risk score
+  -> vector search for semantically similar prior cases
+  -> top relevant cases only
+  -> selected evidence snippets passed to the agent
+```
+
+This design preserves auditability and avoids noisy historical decisions polluting current reasoning.
+
+### 6.5 Learning Loop
+
+Short-term decisions and decision history can produce learning, but the system should not automatically rewrite long-term memory after every case.
+
+Recommended learning loop:
+
+```text
+Decision history
+  -> periodic review of repeated patterns
+  -> human-approved lesson
+  -> update OKF-style Markdown long-term memory
+  -> version the memory update
+```
+
+Example:
+
+```text
+Pattern:
+Several medical equipment procurements were delayed because installation, calibration, and training responsibility were unclear.
+
+Approved long-term lesson:
+For medical equipment contracts, explicitly review installation readiness, calibration ownership, acceptance testing, service response time, and training obligations.
+```
+
+This lesson can then be added to `sectors/medical_equipment.md` or `curated_lessons.md`.
+
+### 6.6 Implementation Decision
+
+For the next implementation, the architecture should use:
+
+- **Long-term memory:** OKF-style Markdown files under an agent-specific knowledge folder.
+- **Core profile:** `contract_agent_profile.md` loaded for every Contract Review Agent run.
+- **Selective topic memory:** metadata and trigger-based retrieval over Markdown files.
+- **Short-term memory:** current input, extracted document text, current run observations, and optionally vector-retrieved snippets from a bounded range.
+- **Decision history:** database or vector-enabled historical store used on demand, not automatically injected into every prompt.
+
+The first implementation can stay simple:
+
+```text
+Load core Markdown files
+  + match case text against topic-file triggers
+  + include top relevant Markdown snippets
+  + include current procurement input and document excerpts
+  + call Contract Review Agent
+```
+
+This gives the demo a clear memory story without requiring complex infrastructure immediately.
+
+---
+
+## 7. Additional Future Agents
 
 The architecture can later include:
 
@@ -516,7 +898,7 @@ This agent enables interaction with enterprise workflows and approvals.
 
 ---
 
-## 7. Why This Better Addresses Agentic AI
+## 8. Why This Better Addresses Agentic AI
 
 The revised architecture demonstrates:
 
@@ -533,7 +915,7 @@ This is stronger than a single-agent analysis demo.
 
 ---
 
-## 8. Short-Term Weekend Demo Plan
+## 9. Short-Term Weekend Demo Plan
 
 ### Must Implement
 
@@ -564,7 +946,7 @@ This is stronger than a single-agent analysis demo.
 
 ---
 
-## 9. Dataset and Experiment Direction
+## 10. Dataset and Experiment Direction
 
 A small static example can make the demo look cosmetic if the output appears pre-decided.
 
@@ -581,7 +963,7 @@ The evaluator agent can help here by checking whether each agent output contains
 
 ---
 
-## 10. Suggested Task Split
+## 11. Suggested Task Split
 
 ### Chinmaey
 
@@ -611,7 +993,7 @@ Option 2: UI Architecture
 
 ---
 
-## 11. Positioning
+## 12. Positioning
 
 Do not discard the PreMortem idea.
 
@@ -625,13 +1007,13 @@ The long-term platform is a reusable agentic business decision auditor.
 
 ---
 
-## 12. One-Line Vision
+## 13. One-Line Vision
 
 PreMortem AI uses orchestrated specialist agents to simulate a business review board before high-risk decisions are approved.
 
 ---
 
-## 13. Practical Weekend Goal
+## 14. Practical Weekend Goal
 
 The goal for the weekend should not be to build the full platform.
 

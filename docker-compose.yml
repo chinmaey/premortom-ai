@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: premortem
       POSTGRES_PASSWORD: premortem
@@ -20,6 +20,10 @@ services:
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
+      OKF_MEMORY_ROOT: ${OKF_MEMORY_ROOT:-/app/agent_profiles/contract_agent_profile}
+      OKF_WRITE_MEMORY_INDEX: ${OKF_WRITE_MEMORY_INDEX:-1}
+      OKF_INDEX_PGVECTOR: ${OKF_INDEX_PGVECTOR:-1}
+      OKF_USE_PGVECTOR_RETRIEVAL: ${OKF_USE_PGVECTOR_RETRIEVAL:-1}
       DATABASE_URL: postgresql://premortem:premortem@db:5432/premortem
     ports:
       - "8000:8000"
