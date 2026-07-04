@@ -71,6 +71,11 @@ def select_okf_memory(
     selected with simple deterministic keyword rules. This avoids sending every
     memory file while keeping the current flow to one final LLM call.
     """
+    if os.getenv("OKF_USE_PGVECTOR_RETRIEVAL", "0") in {"1", "true", "True"}:
+        memory = _select_okf_memory_pgvector(query_text, agent_id, max_chunks)
+        if memory:
+            return memory
+
     chunks = tuple(chunk for chunk in load_okf_chunks(agent_id) if chunk.agent_id == agent_id)
     if not chunks:
         return ""
@@ -256,3 +261,24 @@ def _keywords_from_text(text: str) -> tuple[str, ...]:
 
 def _format_chunk(chunk: OkfMemoryChunk) -> str:
     return f"# {chunk.source_path}\n{chunk.content}"
+
+
+def _select_okf_memory_pgvector(
+    query_text: str,
+    agent_id: str,
+    max_chunks: int,
+) -> str:
+    try:
+        from .okf_pgvector import search_okf_chunks_pgvector
+
+        rows = search_okf_chunks_pgvector(query_text, agent_id, limit=max_chunks)
+    except Exception as exc:
+        print(f"Falling back to rule-based OKF memory selection: {exc}")
+        return ""
+
+    if not rows:
+        return ""
+    return "\n\n".join(
+        f"# {row['source_path']}\n{row['content']}"
+        for row in rows
+    ).strip()

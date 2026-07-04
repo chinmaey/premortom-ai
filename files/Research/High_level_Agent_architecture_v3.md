@@ -666,6 +666,23 @@ LIMIT 5;
 This keeps the architecture modular while avoiding separate storage systems for
 each agent.
 
+Current pgvector implementation note: the first pgvector version can use a
+small deterministic local feature vector to wire the storage and retrieval flow
+without a paid embedding API or new ML dependency. This proves the architecture:
+
+```text
+OKF Markdown
+  -> parsed memory chunks
+  -> local feature vector
+  -> shared pgvector table
+  -> retrieved plain-text chunks
+  -> LLM prompt
+```
+
+Later, replace the temporary local feature vector with a stronger local
+embedding model such as SentenceTransformers, while keeping the same table and
+retrieval interface.
+
 ### 6.2 Contract Review Agent Memory Example
 
 For the Contract Review Agent, long-term memory should contain:

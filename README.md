@@ -72,6 +72,7 @@ docker compose up --build
 
 - UI:      http://localhost:8501
 - API docs: http://localhost:8000/docs
+- Docker uses pgvector-enabled Postgres and indexes OKF memory on backend startup.
 
 ### Option B — Local (two terminals)
 
@@ -83,8 +84,12 @@ python -m venv .venv && . .venv/Scripts/activate   # Windows
 pip install -r requirements.txt
 export OKF_MEMORY_ROOT="$PWD/agent_profiles/contract_agent_profile"  # macOS/Linux
 export OKF_WRITE_MEMORY_INDEX=1                                      # macOS/Linux
+# export OKF_INDEX_PGVECTOR=1                                        # optional, requires local pgvector Postgres
+# export OKF_USE_PGVECTOR_RETRIEVAL=1                                # optional, requires indexed pgvector memory
 # set OKF_MEMORY_ROOT=%CD%\agent_profiles\contract_agent_profile   # Windows cmd
 # set OKF_WRITE_MEMORY_INDEX=1                                      # Windows cmd
+# set OKF_INDEX_PGVECTOR=1                                          # optional, requires local pgvector Postgres
+# set OKF_USE_PGVECTOR_RETRIEVAL=1                                  # optional, requires indexed pgvector memory
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -106,8 +111,11 @@ already exported in your shell or provided by Docker still take precedence.
 `OKF_MEMORY_ROOT` enables the contract agent's durable memory bundle during
 backend runs. `OKF_WRITE_MEMORY_INDEX=1` writes a plain-text metadata index to
 `backend/agent_profiles/contract_agent_profile/contract_agent_memory_index.json`
-on backend startup. If these values are omitted, the app still runs with the
-normal offline/LLM fallback behavior.
+on backend startup. `OKF_INDEX_PGVECTOR=1` also indexes the same chunks into the
+shared `agent_memory_chunks` pgvector table when a pgvector-enabled Postgres is
+available. `OKF_USE_PGVECTOR_RETRIEVAL=1` retrieves OKF prompt memory from that
+table, with rule-based retrieval as a fallback. If these values are omitted, the
+app still runs with the normal offline/LLM fallback behavior.
 
 Open http://localhost:8501, click **Load AIIMS MRI demo**, then **Run PreMortem**.
 
