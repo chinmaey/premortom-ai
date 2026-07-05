@@ -82,15 +82,15 @@ cd premortem-ai/backend
 python -m venv .venv && . .venv/Scripts/activate   # Windows
 # source .venv/bin/activate                         # macOS/Linux
 pip install -r requirements.txt
-export OKF_MEMORY_ROOT="$PWD/agent_profiles/contract_agent_profile"  # macOS/Linux
-export OKF_WRITE_MEMORY_INDEX=1                                      # macOS/Linux
-# export OKF_INDEX_PGVECTOR=1                                        # optional, requires local pgvector Postgres
-# export OKF_USE_PGVECTOR_RETRIEVAL=1                                # optional, requires indexed pgvector memory
-# set OKF_MEMORY_ROOT=%CD%\agent_profiles\contract_agent_profile   # Windows cmd
-# set OKF_WRITE_MEMORY_INDEX=1                                      # Windows cmd
-# set OKF_INDEX_PGVECTOR=1                                          # optional, requires local pgvector Postgres
-# set OKF_USE_PGVECTOR_RETRIEVAL=1                                  # optional, requires indexed pgvector memory
-uvicorn app.main:app --reload --port 8000
+python run_backend.py
+```
+
+For local pgvector-backed OKF memory, install PostgreSQL + pgvector once, then
+run:
+
+```bash
+cd premortem-ai/backend
+python setup_pgvector.py
 ```
 
 Backend HTTP API:
@@ -107,7 +107,10 @@ streamlit run app.py
 ```
 
 The backend and frontend load `../.env` automatically for local runs. Values
-already exported in your shell or provided by Docker still take precedence.
+already exported in your shell or provided by Docker still take precedence. For
+local backend runs, keep OKF and pgvector settings centralized in the repository
+root `.env`; `backend/run_backend.py` fills in local path defaults and starts
+uvicorn.
 `OKF_MEMORY_ROOT` enables the contract agent's durable memory bundle during
 backend runs. `OKF_WRITE_MEMORY_INDEX=1` writes a plain-text metadata index to
 `backend/agent_profiles/contract_agent_profile/contract_agent_memory_index.json`

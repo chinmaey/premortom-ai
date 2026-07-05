@@ -683,6 +683,21 @@ Later, replace the temporary local feature vector with a stronger local
 embedding model such as SentenceTransformers, while keeping the same table and
 retrieval interface.
 
+Implementation details for the current version:
+
+- Indexed data: OKF agent memory only. Bid/run history is not written to
+  pgvector yet.
+- Chunking strategy: one OKF Markdown file becomes one vector chunk.
+- Embedding method: `local_hashing_vector_v1`, a deterministic 32-dimensional
+  local feature vector.
+- Normalization: L2 normalization is applied so longer files do not dominate
+  similarity only because they contain more tokens.
+- Retrieval output: pgvector is used to choose relevant chunks, but the LLM
+  still receives the selected plain-text OKF content, not the numeric vectors.
+- Upgrade path: replace the temporary local hashing vector with a local semantic
+  embedding model and optionally split larger Markdown files by heading or
+  section.
+
 ### 6.2 Contract Review Agent Memory Example
 
 For the Contract Review Agent, long-term memory should contain:
