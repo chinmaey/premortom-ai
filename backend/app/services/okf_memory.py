@@ -18,6 +18,7 @@ from typing import Iterable
 DEFAULT_OKF_MEMORY_ROOT = (
     Path(__file__).resolve().parents[2] / "memory" / "okf"
 )
+AGENT_PROFILE_ROOT = Path(__file__).resolve().parents[2] / "agent_profiles"
 
 
 @dataclass(frozen=True)
@@ -29,19 +30,25 @@ class OkfMemoryChunk:
     content: str
 
 
-def resolve_okf_memory_root() -> Path | None:
+def resolve_okf_memory_root(agent_id: str = "contract_agent") -> Path | None:
     """Return the OKF memory bundle root if configured and present."""
-    configured = os.getenv("OKF_MEMORY_ROOT")
+    agent_env = f"{agent_id.upper()}_OKF_MEMORY_ROOT"
+    configured = os.getenv(agent_env)
+    if not configured and agent_id == "contract_agent":
+        configured = os.getenv("OKF_MEMORY_ROOT")
     if configured:
         root = Path(configured).expanduser()
         return root if root.is_dir() else None
+    profile_root = AGENT_PROFILE_ROOT / f"{agent_id}_profile"
+    if profile_root.is_dir():
+        return profile_root
     return DEFAULT_OKF_MEMORY_ROOT if DEFAULT_OKF_MEMORY_ROOT.is_dir() else None
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=8)
 def load_okf_chunks(agent_id: str = "contract_agent") -> tuple[OkfMemoryChunk, ...]:
     """Load OKF markdown files as selectable memory chunks."""
-    root = resolve_okf_memory_root()
+    root = resolve_okf_memory_root(agent_id)
     if root is None:
         return ()
 
@@ -111,7 +118,7 @@ def write_okf_memory_index(
 
     The file contains plain text and metadata only, not embedding vectors.
     """
-    root = resolve_okf_memory_root()
+    root = resolve_okf_memory_root(agent_id)
     if root is None:
         return None
 

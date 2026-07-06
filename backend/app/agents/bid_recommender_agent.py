@@ -10,6 +10,7 @@ import json
 from typing import Dict, List
 
 from ..services.llm import has_api_key, run_agent_llm
+from ..services.okf_memory import select_okf_memory
 
 NAME = "Bid Recommender Agent"
 
@@ -147,9 +148,21 @@ def _llm_enrichment(
         "winner": winner,
         "ranked_quotes": ranked,
     }
+    memory = select_okf_memory(
+        json.dumps(payload),
+        agent_id="bid_recommender_agent",
+        max_chunks=8,
+    )
+    instructions = INSTRUCTIONS
+    if memory:
+        instructions = (
+            f"{INSTRUCTIONS}\n\n"
+            "# Bid Recommender OKF memory selected for this explanation\n"
+            f"{memory}\n"
+        )
     result = run_agent_llm(
         name=NAME,
-        instructions=INSTRUCTIONS,
+        instructions=instructions,
         user_payload=json.dumps(payload),
         temperature=0.1,
     )

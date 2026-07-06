@@ -396,6 +396,7 @@ Future inputs:
 - Compliance / Policy Agent outputs.
 - Vendor / External Risk Agent outputs.
 - Internet / Market Research Agent outputs.
+- MCP-based external research outputs for current market/specification checks.
 - Historical procurement examples.
 - Human reviewer comments or overrides.
 
@@ -416,6 +417,45 @@ The Bid Recommendation Agent is different from the Decision Summary Agent:
 - Decision Summary Agent converts evaluator-approved results into a business-friendly report and approval package.
 
 The first implementation can use a simple ranking strategy based on Contract Review Agent outputs and dataset metadata. Later, the same agent input schema can accept internet, vendor, benchmark, compliance, and historical signals without changing the UI or graph API contract.
+
+MCP and internet-based research should be treated as an external signal layer,
+not as the recommender's core decision logic. The Bid Recommendation Agent can
+ask a Market Intelligence or MCP Research tool for structured signals such as:
+
+- Current market price range for the equipment or service.
+- Typical delivery timelines.
+- Typical advance payment and retention practices.
+- Common warranty-start trigger, such as delivery, installation, commissioning,
+  or acceptance.
+- Expected installation and commissioning responsibility.
+- Typical training inclusion.
+- Common service SLA terms such as response time, resolution time, spare parts,
+  uptime, preventive maintenance, and remedies.
+- Regulatory or certification expectations.
+- Vendor/product reputation signals and public adverse-news/debarment signals
+  where available.
+- Comparable procurement examples.
+
+The output of this research layer should be structured and source-aware, for
+example:
+
+```json
+{
+  "market_price_range": "...",
+  "typical_delivery_timeline": "...",
+  "typical_warranty_start": "...",
+  "typical_training_expectation": "...",
+  "source_urls": ["..."],
+  "retrieved_at": "..."
+}
+```
+
+The recommender should compare these external signals against each quote, but
+it should keep current quote evidence separate from internet evidence. Internet
+research can highlight unusual terms or missing information, but it should not
+override hard blockers from contract review, compliance, or current bid
+requirements. For repeatability, the research result should be stored as a run
+artifact and later as decision-history context.
 
 ---
 
@@ -867,7 +907,71 @@ vector-similar risk-pattern chunks.
 
 This design preserves auditability and avoids noisy historical decisions polluting current reasoning.
 
-### 6.5 Learning Loop
+### 6.5 Bid Recommendation Agent Memory
+
+The Bid Recommendation Agent needs a different memory design from the Contract
+Review Agent. The Contract Review Agent uses memory to spot contract-risk
+patterns within one quote. The Bid Recommendation Agent should use memory to
+compare multiple quotes, vendors, and tradeoffs within one bid.
+
+The recommender should have three memory inputs:
+
+1. **Short-term bid memory**
+   - Current bid ID.
+   - All quote IDs included in the run.
+   - Vendor proposal artifacts.
+   - Contract Review Agent outputs for each quote.
+   - Future cost, compliance, vendor-risk, market-research, and evaluator
+     outputs.
+   - Management criteria and weights where available.
+
+2. **Decision-history memory**
+   - Prior winning quote patterns.
+   - Prior shortlist patterns.
+   - Same-vendor outcomes and repeated vendor issues.
+   - Same-category quote comparisons.
+   - Reviewer overrides and human feedback when available.
+   - Similar bid outcomes retrieved from `decision_history` and
+     `decision_history_chunks`.
+
+3. **External market/specification memory**
+   - MCP or internet research results stored as structured run artifacts.
+   - Market price ranges.
+   - Typical delivery, warranty, training, service, and payment practices.
+   - Relevant regulatory or certification expectations.
+   - Source URLs, retrieval timestamp, and confidence/quality notes.
+
+The recommender should not directly consume unbounded raw history or raw web
+pages. It should receive compact, structured comparison signals. A future
+retrieval policy can combine:
+
+```text
+Current bid quote reviews
+  + same-vendor decision history
+  + same-category decision history
+  + vector-similar prior bid outcomes
+  + source-aware market/specification benchmarks
+  -> deterministic ranking and guardrails
+  -> optional LLM explanation
+```
+
+The deterministic ranking should remain separate from the optional LLM
+explanation. The LLM may improve rationale, feedback, and negotiation language,
+but it should not silently change the winner, shortlist, or score components.
+
+Current implementation note: the Bid Recommender Agent now has an OKF-style
+profile under:
+
+```text
+backend/agent_profiles/bid_recommender_agent_profile/
+```
+
+This memory contains ranking, guardrail, external-signal, and tie-breaker
+guidance. In the current implementation, it is loaded only into the optional LLM
+explanation path. The deterministic ranking still uses explicit code and should
+remain stable across runs.
+
+### 6.6 Learning Loop
 
 Short-term decisions and decision history can produce learning, but the system should not automatically rewrite long-term memory after every case.
 
@@ -893,7 +997,7 @@ For medical equipment contracts, explicitly review installation readiness, calib
 
 This lesson can then be added to `sectors/medical_equipment.md` or `curated_lessons.md`.
 
-### 6.6 Implementation Decision
+### 6.7 Implementation Decision
 
 For the next implementation, the architecture should use:
 
