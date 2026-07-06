@@ -11,42 +11,42 @@ Identify contract and commercial risks that could cause procurement failure afte
 - Warranty, payment, installation, training, and service-term analysis
 - Follow-up question generation
 
-## Memory And Retrieval Roadmap
+## Memory And Retrieval
 
-### Stage 1 - File-Backed History, Current
+### Current - OKF Memory And pgvector Decision History
 
-- Store contract review outputs, run state, events, and final decisions as JSON/JSONL/CSV artifacts.
-- Current artifacts preserve history for audit and demo replay.
-- Current artifacts are not automatically used as agent memory unless the agent code reads them.
+- Store contract review outputs, run state, events, and final decisions as JSON/JSONL/CSV artifacts for audit and demo replay.
+- Store completed bid decisions in PostgreSQL tables `decision_history` and `decision_history_chunks`.
+- Keep stable review guidance in OKF-style Markdown memory under this profile folder.
+- Keep decision history separate from OKF memory: history is evidence about prior cases, not a standing policy rule.
 
-### Stage 2 - Metadata / Plain-Text Retrieval
+### Bounded Decision-History Prompt Context
 
-- Read prior JSON/JSONL/CSV artifacts before a new contract review.
-- Filter by simple metadata such as vendor, equipment type, decision, risk level, date, or repeated issue.
-- Convert the selected prior records into a short plain-text memory block.
-- Add that memory block to the contract review prompt.
-- This stage is still prompt injection, but the selected history is more deliberate than manually pasting files.
+When enabled, the Contract Review Agent receives a bounded prior-decision block:
 
-### Stage 3 - Vector Retrieval
+- Last 10 completed decisions globally.
+- Last 5 decisions for the same vendor, when the vendor is known.
+- Last 5 decisions for the same equipment or procurement category.
+- Top 5 vector-similar `decision_history_chunks` for the current quote/context.
 
-- Embed prior contract reviews, findings, and decision summaries.
-- Embed the current procurement or contract-review query.
-- Retrieve semantically similar prior cases, even when keywords do not exactly match.
-- Add the top retrieved cases as text in the prompt.
-- The vector layer improves selection; the LLM still reasons over retrieved text.
+The character limit on each memory item is only a prompt-size guard after
+retrieval. It is not the selection mechanism. Important factors should be
+selected by metadata filters and pgvector similarity.
 
-### Stage 4 - Durable Retrieval Store
+### Retrieval Guardrails
 
-- Move historical decision memory from loose files into PostgreSQL tables when reliability or querying becomes important.
-- Use `pgvector`, ChromaDB, or OpenAI vector stores for semantic retrieval.
-- Keep timestamps and metadata so the system can support temporal analysis, vendor history, and decision trends.
-- Continue writing JSON/JSONL artifacts for auditability if useful for the demo and traceability.
+- Use prior history for consistency and pattern spotting.
+- Do not copy prior risk scores into the current review.
+- Do not treat prior decisions as proof that the current quote has the same risk.
+- Current quote text and current procurement fields remain the primary evidence.
+- If database retrieval fails, continue with OKF memory and current-case analysis.
 
 ### Current Memory Scope
 
 - Short-term: quote text, fixed procurement fields, vendor proposal artifact when available.
-- Long-term: not implemented yet; future versions should retrieve historical contract failure patterns and organization contract preferences.
-- RAG opportunity: improves retrieval of standard clauses, policy rules, historical contract failure examples, and similar prior bid decisions.
+- Long-term OKF memory: warranty, advance payment, installation, training, service-level, evidence-quality, and clause-conflict guidance.
+- Decision history memory: bounded hybrid retrieval from `decision_history` and `decision_history_chunks`.
+- RAG opportunity: improve retrieval quality with stronger semantic embeddings and richer vendor/category metadata.
 
 ## Connectors
 

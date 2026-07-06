@@ -203,6 +203,44 @@ psql "postgresql://premortem:premortem@localhost:5432/premortem" -c "SELECT coun
 psql "postgresql://premortem:premortem@localhost:5432/premortem" -c "SELECT count(*) FROM decision_history_chunks;"
 ```
 
+## Decision History Memory Limits
+
+The Contract Review Agent can receive bounded prior decision history as prompt context.
+
+Default retrieval policy:
+
+- last 10 completed decisions globally
+- last 5 decisions for the same vendor, when vendor name is known
+- last 5 decisions for the same procurement/equipment category
+- top 5 vector-similar decision-history chunks for the current quote/context
+
+Environment controls:
+
+```env
+DECISION_HISTORY_MEMORY_ENABLED=1
+DECISION_HISTORY_GLOBAL_LIMIT=10
+DECISION_HISTORY_VENDOR_LIMIT=5
+DECISION_HISTORY_CATEGORY_LIMIT=5
+DECISION_HISTORY_SIMILAR_LIMIT=5
+DECISION_HISTORY_ITEM_CHAR_LIMIT=500
+DECISION_HISTORY_TOTAL_CHAR_LIMIT=6000
+```
+
+Disable decision-history prompt memory without disabling database storage:
+
+```env
+DECISION_HISTORY_MEMORY_ENABLED=0
+```
+
+The item character limit is only a final prompt-size guard after retrieval. The
+important-factor lane comes from pgvector similarity over `decision_history_chunks`.
+The total character limit caps the combined history block after all retrieval
+lanes are assembled.
+
+The agent prompt treats all history as context only. It should not copy prior
+risk scores or treat prior cases as proof that the current quote has the same
+risk.
+
 ## If The Database Is Not Set Up Yet
 
 Run the local setup script:

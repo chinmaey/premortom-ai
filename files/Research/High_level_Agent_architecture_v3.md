@@ -851,11 +851,19 @@ For example:
 
 ```text
 Decision history database
-  -> exact filters by date, department, vendor, contract type, risk score
-  -> vector search for semantically similar prior cases
-  -> top relevant cases only
+  -> bounded recent history, such as last 10 completed decisions
+  -> same-vendor history, such as last 5 decisions for the same vendor
+  -> same-category history, such as last 5 decisions for the same equipment type
+  -> vector search over decision_history_chunks for similar risk patterns
+  -> compact relevant cases only
   -> selected evidence snippets passed to the agent
 ```
+
+The prompt-size limit should be a final formatting guard, not the retrieval
+strategy. Important factors should be selected first through metadata filters
+and pgvector similarity. The current implementation uses a hybrid selector:
+recent global decisions, same-vendor decisions, same-category decisions, and
+vector-similar risk-pattern chunks.
 
 This design preserves auditability and avoids noisy historical decisions polluting current reasoning.
 
