@@ -20,7 +20,13 @@ from fastapi.responses import Response
 from .agents import extraction_agent
 from .agents.orchestrator import run_bid_evaluation, run_premortem
 from .models import PreMortemReport, ProcurementInput
-from .services import bid_outputs, document_parser, input_bids, report as report_service
+from .services import (
+    bid_outputs,
+    db_status,
+    document_parser,
+    input_bids,
+    report as report_service,
+)
 from .services.llm import has_api_key
 from .services.okf_memory import write_okf_memory_index
 from .services.okf_pgvector import index_okf_chunks_pgvector, pgvector_index_config
@@ -77,6 +83,11 @@ def health():
         "mode": "agentic" if has_api_key() else "offline (rule-based)",
         "service": "PreMortem AI",
     }
+
+
+@app.get("/db/status")
+def database_status():
+    return db_status.get_database_status()
 
 
 @app.get("/sample", response_model=ProcurementInput)

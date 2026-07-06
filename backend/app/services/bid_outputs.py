@@ -123,6 +123,23 @@ def complete_run(run_id: str, result: Dict[str, object]) -> None:
         completed_at=_now(),
     )
     append_event(run_id, "run_completed", {"winner": winner})
+    try:
+        from .decision_history_pgvector import store_bid_run_history
+
+        stored = store_bid_run_history(
+            run_id=run_id,
+            state=state,
+            result=result,
+            run_dir=BID_RUNS_DIR / run_id,
+        )
+        if stored:
+            append_event(run_id, "decision_history_stored", {"table": "decision_history"})
+    except Exception as exc:
+        append_event(
+            run_id,
+            "decision_history_skipped",
+            {"message": str(exc)},
+        )
 
 
 def fail_run(run_id: str, message: str) -> None:

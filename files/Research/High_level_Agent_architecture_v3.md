@@ -798,20 +798,52 @@ Current case
 
 Decision history is not the same as prompt memory. It should be treated as a long-term evidence store.
 
-Decision history should capture:
+Decision history should capture enough information to explain and replay why a
+recommendation was made. It should store both the static inputs provided by the
+user and the learned or retrieved context that influenced the decision.
 
-- Case ID.
-- Date and time.
-- Procurement input.
-- Uploaded document metadata.
-- Extracted document text or document references.
-- Agent outputs and risk scores.
-- Final recommendation.
+The decision snapshot should include:
+
+- Case ID, run ID, date, and time.
+- Static procurement input: title, category, department, location, budget,
+  timeline, equipment or service type, project criticality, site readiness,
+  workforce readiness, regulatory requirements, and raw form fields.
+- Vendor and quote inputs: quote ID, vendor name, quoted amount, advance
+  payment, delivery timeline, warranty start, installation responsibility,
+  training commitment, service response terms, local service availability, and
+  source document metadata.
+- Extracted document text, selected excerpts, or durable document references.
+- Static evaluation parameters: criteria version, rubric version, risk
+  thresholds, scoring weights, agent/profile version, prompt version, and memory
+  version where available.
+- Learned or retrieved context: OKF memory chunks retrieved, historical examples
+  used, future decision-history chunks retrieved, similarity scores, retrieval
+  metadata, and any reviewer preference or policy override used later.
+- Specialist agent outputs: contract risk, infrastructure readiness, workforce
+  readiness, historical intelligence, financial exposure, decision board,
+  debate turns, and scenario simulations.
+- Final decision: selected quote or vendor, risk score, risk level,
+  recommendation, findings, rationale, conditions before award, and
+  approve/revise/reject status if the workflow captures it.
 - Human decision or override.
 - Actual outcome when known.
 - Delay, failure, or success labels.
-- Model/provider used.
-- Version of the agent memory or rubric used.
+- Audit metadata: model/provider used, offline fallback status, app or git
+  version if available, and whether LLM calls succeeded.
+
+The vector-search layer should store a compact text representation of the
+decision rather than only the final recommendation. For example, one completed
+review may produce several `decision_history_chunks` rows:
+
+- Procurement summary.
+- Winning decision summary.
+- Risk findings summary.
+- Vendor or quote summary.
+- Outcome summary when the real-world result is known.
+
+Keep these rows separate from `agent_memory_chunks`. Agent memory is stable
+guidance about how the agent should think; decision history is evidence about
+what happened in previous cases.
 
 This can be stored in a database or vector-enabled store. The important rule is that the agent should not access all decision history all the time. It should query decision history only when needed, similar to how an application uses a database and cache.
 
