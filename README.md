@@ -72,10 +72,23 @@ docker compose up --build
 
 - UI:      http://localhost:8501
 - API docs: http://localhost:8000/docs
+- Docker DB from host: `localhost:5433`
 - Docker uses pgvector-enabled Postgres, indexes OKF memory on backend startup,
   and stores completed bid decision history in Postgres.
 
-Useful Docker checks:
+In a second terminal, verify the Docker backend is healthy:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Run the bid contract-review integration test against the Docker backend:
+
+```bash
+python backend/tests/test_contract_review.py --api http://127.0.0.1:8000 --bid-id BID-001
+```
+
+Check pgvector/Postgres tables inside Docker:
 
 ```bash
 docker compose exec db psql -U premortem -d premortem -c "\dt"
@@ -83,6 +96,15 @@ docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM a
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history;"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history_chunks;"
 ```
+
+From the host machine, connect to the Docker database on port `5433`:
+
+```bash
+psql "postgresql://premortem:premortem@127.0.0.1:5433/premortem"
+```
+
+Do not use host port `5432` for Docker checks unless you changed
+`docker-compose.yml`; `5432` may be your local PostgreSQL.
 
 ### Option B — Local (two terminals)
 

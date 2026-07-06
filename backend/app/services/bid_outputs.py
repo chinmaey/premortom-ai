@@ -333,9 +333,11 @@ def read_json(path: Path) -> Dict[str, object]:
 
 def write_json(path: Path, data: Dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
+    tmp_path = path.with_name(f".{path.name}.tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
         f.write("\n")
+    tmp_path.replace(path)
 
 
 def _initial_state(run_id: str, bid_id: str, quote_ids: List[str]) -> Dict[str, object]:
