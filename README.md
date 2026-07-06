@@ -72,7 +72,17 @@ docker compose up --build
 
 - UI:      http://localhost:8501
 - API docs: http://localhost:8000/docs
-- Docker uses pgvector-enabled Postgres and indexes OKF memory on backend startup.
+- Docker uses pgvector-enabled Postgres, indexes OKF memory on backend startup,
+  and stores completed bid decision history in Postgres.
+
+Useful Docker checks:
+
+```bash
+docker compose exec db psql -U premortem -d premortem -c "\dt"
+docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM agent_memory_chunks;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history_chunks;"
+```
 
 ### Option B — Local (two terminals)
 
