@@ -90,9 +90,7 @@ The weekend implementation will focus on a subset of these components while pres
 ```text
 Business Request
       ↓
-UI Guidance Agent / Intake Assistant
-      ↓
-Customer / Requirement Intake Agent
+RFQ Intake and Negotiation UI Guidance Agent
       ↓
 Orchestrator / Manager Agent
       ↓
@@ -149,24 +147,39 @@ The input layer should eventually support:
 
 ---
 
-### 5.2 UI Guidance Agent
+### 5.2 RFQ Intake and Negotiation UI Guidance Agent
 
-The UI Guidance Agent is an optional agent-assisted UI layer. It should help the user move through the workflow, but it should not own core storage, orchestration, or final decision logic.
+The RFQ Intake and Negotiation UI Guidance Agent is the agent-assisted frontend
+workflow for two related purposes:
 
-This agent is different from the Streamlit UI itself. The UI remains a deterministic application surface, while the UI Guidance Agent helps users understand what to do next.
+1. Create and refine RFQ requirements before vendor quotes are submitted.
+2. Support final contract negotiation with vendors after quote evaluation.
+
+It should be delivered as a new frontend page, similar in structure to the
+current `Screen 1 - Procurement Input`, but focused on management expectations,
+RFQ creation, and negotiation preparation rather than only vendor proposal
+values.
+
+The current procurement input screen should remain unchanged for now. This
+agent-assisted workflow should be added as a separate RFQ and negotiation page in
+the frontend when implemented.
 
 Responsibilities:
 
-- Explain the current screen and next action.
+- Capture and clarify the customer or hospital requirement.
 - Help the user create a bid or request-for-quote.
-- Suggest missing bid details or quote-upload requirements.
+- Convert role-based expectations into structured workflow data.
+- Identify missing input fields and ask clarifying questions.
+- Select or recommend the appropriate workflow template.
+- Suggest missing RFQ details or quote-upload requirements.
 - Recommend decision criteria templates.
-- Summarize agent status and run progress in plain business language.
-- Explain bid results and why a quote won or lost.
+- Summarize agent status and run progress in plain business language after the
+  RFQ moves into evaluation.
+- Explain bid results and why a quote won or lost after vendor responses are
+  reviewed.
 - Help the user drill down from bid-level results into quote-level analysis.
-- Ask clarifying questions when the input is incomplete.
 
-The UI Guidance Agent should not:
+The RFQ Intake and Negotiation UI Guidance Agent should not:
 
 - Save files directly.
 - Modify `bids_database.csv` or output artifacts directly.
@@ -174,11 +187,10 @@ The UI Guidance Agent should not:
 - Make final procurement decisions independently.
 - Dynamically generate arbitrary UI code.
 
-The UI Guidance Agent should now be treated as a near-term design component,
-but the rendered UI should still remain deterministic. The agent should guide
-and explain; the application should own the actual state changes.
+The agent should guide, recommend, and draft. The frontend and backend APIs
+should own the actual state changes, saved RFQ data, and accepted criteria.
 
-The UI Guidance Agent has two components:
+The RFQ Intake and Negotiation UI Guidance Agent has two components:
 
 #### Static Role-Based Intake Component
 
@@ -294,7 +306,7 @@ The chat component supports guided refinement around two workflows.
      -> draft vendor clarification / negotiation message
    ```
 
-The UI Guidance Agent should remain bounded by these rules:
+The RFQ Intake and Negotiation UI Guidance Agent should remain bounded by these rules:
 
 - It can suggest RFQ criteria and negotiation questions.
 - It can ask the recommender or market research services for structured advice.
@@ -303,25 +315,13 @@ The UI Guidance Agent should remain bounded by these rules:
 - It should not change accepted criteria without user confirmation.
 - It should not replace the deterministic Bid Recommendation Agent ranking.
 
----
-
-### 5.3 Customer / Requirement Intake Agent
-
-This agent captures and clarifies the business requirement.
-
-Responsibilities:
-
-- Understand the business decision being reviewed
-- Identify missing input fields
-- Convert unstructured input into structured workflow data
-- Ask clarifying questions where required
-- Select the appropriate workflow template
-
-For the weekend demo, this can remain simple or partially mocked.
+The previous Customer / Requirement Intake Agent concept is included here. It is
+not a separate agent in the current plan; it is the intake capability of the RFQ
+and negotiation page.
 
 ---
 
-### 5.4 Orchestrator / Manager Agent
+### 5.3 Orchestrator / Manager Agent
 
 The orchestrator is the central controller of the workflow.
 
@@ -343,7 +343,7 @@ For the next implementation step, the orchestrator can be a lightweight controll
 
 ---
 
-### 5.5 Parallel Execution Layer
+### 5.4 Parallel Execution Layer
 
 This is not a business agent. It is a system layer used by the orchestrator.
 
@@ -360,7 +360,7 @@ This layer helps justify the use of Agentic AI because the system is not just a 
 
 ---
 
-### 5.6 Specialist Agents
+### 5.5 Specialist Agents
 
 Specialist agents should be generic enough to support multiple business workflows, while still allowing domain-specific adapters.
 
@@ -595,7 +595,68 @@ Checks:
 
 This may be important for government, restricted-domain, or enterprise procurement use cases.
 
-##### 7. Bid Recommendation Agent
+##### 7. Invoice Monitoring and Contract Compliance Agent
+
+The Invoice Monitoring and Contract Compliance Agent is a post-award agent. It
+monitors whether vendor invoices, recurring charges, consumables, spare parts,
+service events, warranty coverage, and maintenance activities remain compliant
+with the awarded contract.
+
+This agent also owns invoice-level fraud and anomaly detection for the current
+design. Fraud detection should be framed as risk and anomaly review, not as a
+legal conclusion.
+
+Primary responsibilities:
+
+- Generate or validate the expected invoice trail for the main MRI machine
+  purchase.
+- Simulate daily, monthly, quarterly, annual, or milestone-based transaction
+  trails for associated services and parts.
+- Track consumables, spare parts, coils, service kits, warranty extensions,
+  software subscriptions, calibration, preventive maintenance, corrective
+  maintenance, training refreshers, uptime commitments, and SLA obligations.
+- Compare actual or simulated invoices against contract terms, purchase order
+  milestones, acceptance criteria, warranty coverage, and service commitments.
+- Identify charges that should be included under warranty, AMC, CMC, SLA, or the
+  original quote but appear again as separate invoices.
+- Detect duplicate invoices, unexplained price drift, abnormal invoice timing,
+  missing service evidence, suspicious bundling, and recurring charges that were
+  not visible during quote comparison.
+- Maintain a lifecycle-cost view after award, not only the initial purchase
+  amount.
+- Produce evidence for compliance review, vendor performance scoring, future
+  procurement memory, and negotiation preparation.
+
+Expected inputs:
+
+- Awarded quote and final contract terms.
+- Payment milestones and acceptance criteria.
+- Warranty, service, SLA, training, consumables, and spare-parts commitments.
+- Vendor invoices and transaction logs.
+- Market research on consumables and lifecycle costs.
+- Historical decision and invoice records when available.
+
+Expected outputs:
+
+- Expected invoice and transaction schedule.
+- Invoice compliance findings.
+- Lifecycle-cost forecast and actual-vs-expected variance.
+- Missing-cost and unclear-responsibility warnings.
+- Fraud/anomaly risk indicators with evidence.
+- Supply continuity risks.
+- Follow-up questions for vendor negotiation, compliance review, or contract
+  enforcement.
+
+Guardrails:
+
+- Treat simulated invoices as planning artifacts, not accounting records.
+- Separate contracted costs, actual invoice costs, and estimated future costs.
+- Use careful language such as "potential anomaly", "requires review", or
+  "possible non-compliance".
+- Do not approve payments, reject payments, accuse a vendor of fraud, or modify
+  financial records automatically.
+
+##### 8. Bid Recommendation Agent
 
 The Bid Recommendation Agent is the decision integrator for a bidding process. It compares multiple vendor quotes within one bid and recommends the best quote or shortlist.
 
@@ -613,6 +674,8 @@ Future inputs:
 
 - Cost / Benchmark Agent outputs.
 - Compliance / Policy Agent outputs.
+- Invoice Monitoring and Contract Compliance Agent outputs when post-award
+  history exists.
 - Vendor / External Risk Agent outputs.
 - Internet / Market Research Agent outputs.
 - MCP-based external research outputs for current market/specification checks.
@@ -764,7 +827,7 @@ service returns the same structured benchmark schema.
 
 ---
 
-### 5.7 Evaluator Agent
+### 5.6 Evaluator Agent
 
 The evaluator reviews the overall quality of the workflow.
 
@@ -783,7 +846,7 @@ This is important because the system should not only generate content; it should
 
 ---
 
-### 5.8 Decision Summary Agent
+### 5.7 Decision Summary Agent
 
 The Decision Summary Agent converts the evaluator-approved outputs into a business-friendly decision package.
 
@@ -802,7 +865,7 @@ Final output should include:
 
 ---
 
-### 5.9 UI Dashboard
+### 5.8 UI Dashboard
 
 The UI should show the agentic workflow, not just the final answer.
 
@@ -1364,6 +1427,7 @@ The architecture can later include:
 - Agent Operation Cost Management Agent
 - Contract Review Agent
 - Continuous Monitoring Agent
+- Invoice Monitoring and Contract Compliance Agent
 
 These should not all be implemented immediately. They are useful for showing long-term extensibility.
 
