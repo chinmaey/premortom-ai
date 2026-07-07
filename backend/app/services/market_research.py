@@ -30,6 +30,9 @@ Return one JSON object with these keys:
   installation, training, service_sla
 - regulatory_or_certification_expectations: object with summary, confidence, sources
 - vendor_or_product_reputation_signals: list of objects
+- consumables_and_lifecycle_costs: object with summary, known_consumables,
+  recurring_cost_risks, confidence, sources
+- current_market_or_future_trends: object with summary, signals, confidence, sources
 - red_flags: list of strings
 - limitations: list of strings
 
@@ -172,6 +175,19 @@ def _skipped(reason: str) -> dict[str, Any]:
             "sources": [],
         },
         "vendor_or_product_reputation_signals": [],
+        "consumables_and_lifecycle_costs": {
+            "summary": "",
+            "known_consumables": [],
+            "recurring_cost_risks": [],
+            "confidence": "low",
+            "sources": [],
+        },
+        "current_market_or_future_trends": {
+            "summary": "",
+            "signals": [],
+            "confidence": "low",
+            "sources": [],
+        },
         "red_flags": [],
         "limitations": [reason],
     }

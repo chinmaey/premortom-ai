@@ -386,6 +386,10 @@ Primary responsibilities:
 - Identify whether training is normally included.
 - Identify common service SLA expectations such as response, resolution, spare
   parts, preventive maintenance, uptime, remedies, and exclusions.
+- Identify consumables, recurring supplies, software subscriptions, service
+  kits, spare parts, and lifecycle-cost dependencies where relevant.
+- Identify current market facts, supply constraints, technology lifecycle
+  changes, or future trends that may not be present in the base LLM model.
 - Identify relevant regulatory, certification, or compliance expectations.
 - Identify public vendor/product reputation signals, adverse news, debarment, or
   dispute indicators when available.
@@ -420,6 +424,19 @@ Suggested output shape:
     "installation": "...",
     "training": "...",
     "service_sla": "..."
+  },
+  "consumables_and_lifecycle_costs": {
+    "summary": "...",
+    "known_consumables": ["..."],
+    "recurring_cost_risks": ["..."],
+    "sources": ["..."],
+    "confidence": "low|medium|high"
+  },
+  "current_market_or_future_trends": {
+    "summary": "...",
+    "signals": ["..."],
+    "sources": ["..."],
+    "confidence": "low|medium|high"
   },
   "red_flags": ["..."],
   "limitations": ["..."]

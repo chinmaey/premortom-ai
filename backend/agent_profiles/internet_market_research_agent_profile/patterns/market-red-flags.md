@@ -21,6 +21,11 @@ Watch for:
 - Training excluded when market norms indicate training is usually included.
 - Service SLA missing resolution time, spare parts, uptime, preventive
   maintenance, remedies, or exclusions.
+- Consumables, software subscriptions, replacement parts, or maintenance
+  supplies omitted from the commercial offer.
+- Product nearing end-of-life, support sunset, constrained supply, or requiring
+  costly upgrades soon after purchase.
+- Recurring lifecycle costs likely to change the apparent value of the quote.
 - Certification claims that are hard to verify.
 - Public adverse news, debarment, litigation, or repeated delivery disputes.
 - Vendor claims that conflict with public product/specification information.

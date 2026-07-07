@@ -23,6 +23,8 @@ Expected fields:
 - `installation_and_commissioning_norms`
 - `training_expectation`
 - `service_sla_expectation`
+- `consumables_and_lifecycle_costs`
+- `current_market_or_future_trends`
 - `certification_or_regulatory_expectation`
 - `vendor_or_product_reputation_signals`
 - `red_flags`

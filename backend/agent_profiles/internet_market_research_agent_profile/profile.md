@@ -38,6 +38,10 @@ compare vendor quotes.
 - Installation, commissioning, and acceptance responsibility norms.
 - Training inclusion expectations.
 - Service SLA expectations.
+- Consumables, recurring supplies, software subscriptions, spare parts, service
+  kits, and other lifecycle-cost dependencies.
+- Current market facts, supply constraints, product lifecycle changes, or future
+  trends that may not be present in the base LLM model.
 - Regulatory, certification, or compliance expectations.
 - Vendor/product reputation, adverse news, debarment, or dispute signals when available.
 
