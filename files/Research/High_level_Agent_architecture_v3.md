@@ -174,7 +174,134 @@ The UI Guidance Agent should not:
 - Make final procurement decisions independently.
 - Dynamically generate arbitrary UI code.
 
-For the first implementation, this can remain a future component. The practical UI should still use deterministic screens for bid intake, quote uploads, run monitoring, results, and quote detail.
+The UI Guidance Agent should now be treated as a near-term design component,
+but the rendered UI should still remain deterministic. The agent should guide
+and explain; the application should own the actual state changes.
+
+The UI Guidance Agent has two components:
+
+#### Static Role-Based Intake Component
+
+The static component is similar to the current first frontend screen, but it is
+intended for management, doctors, technicians, biomedical engineering teams, and
+procurement users before vendor proposals are submitted.
+
+Instead of capturing vendor proposal values, it captures the organization's
+expectations and constraints.
+
+The static intake should allow the user to:
+
+- Select role, such as management, doctor, technician, biomedical engineer, or
+  procurement officer.
+- Choose expectation profile, such as premium clinical capability, balanced
+  cost and service, lowest total lifecycle cost, fastest deployment, or strict
+  compliance.
+- Enter budget and allowed tolerance, such as budget plus or minus a percentage.
+- Enter mandatory minimum criteria and negotiable criteria.
+- Enter desired values for technical, operational, service, training, warranty,
+  delivery, installation, and lifecycle-cost expectations.
+- Mark which features are hard cutoffs, negotiable gaps, or scoring preferences.
+- Capture local context such as hospital size, expected patient volume,
+  clinical department needs, existing infrastructure, and staffing readiness.
+
+This static component produces structured management criteria that downstream
+agents can use:
+
+```text
+management expectation profile
+  -> minimum criteria
+  -> weighted preferences
+  -> budget and tolerance
+  -> negotiable feature ranges
+  -> RFQ draft inputs
+```
+
+#### Chat Guidance Component
+
+The chat component supports guided refinement around two workflows.
+
+1. **Initial RFQ generation**
+
+   The chat component should take the static intake values, pass them to the Bid
+   Recommendation Agent and future Internet / Market Research Agent, and ask for
+   recommended changes before the RFQ is issued.
+
+   The goal is to set realistic expectations while staying within the budget
+   tolerance and preserving the strongest features possible for the selected
+   technology segment and competitive brands.
+
+   It should help answer questions such as:
+
+   - Are the requested features realistic for this budget?
+   - Which features should be mandatory versus negotiable?
+   - Which feature levels are likely to increase cost sharply?
+   - Which service, warranty, training, or lifecycle expectations should be
+     explicitly included in the RFQ?
+   - Are there competing hospitals or facilities in the region with comparable
+     MRI capabilities that should inform the requirement?
+
+   The output should be an RFQ recommendation package, not a final procurement
+   decision:
+
+   ```text
+   static intake
+     + market/specification research
+     + recommender suggestions
+     -> RFQ criteria recommendations
+     -> draft RFQ language
+     -> assumptions and tradeoffs
+   ```
+
+2. **Vendor negotiation questions**
+
+   After vendor quotes are reviewed, the chat component should help management
+   compare top recommendations and prepare negotiation questions.
+
+   It should present the top N recommendations in a visual comparison format.
+   A web chart, ranked comparison table, risk-versus-value chart, or feature
+   tradeoff matrix may be appropriate depending on the UI. The important point
+   is that users should be able to compare vendors by feature, risk, cost,
+   service terms, and negotiation gaps.
+
+   The chat should allow the user to adjust feature values and see estimated
+   cost/risk implications. For example:
+
+   ```text
+   Increase warranty from delivery to commissioning
+   Add operator and technician training
+   Add 24-hour resolution SLA
+   Add spare-parts commitment
+   Reduce advance payment
+   Shift installation responsibility to vendor
+   ```
+
+   The UI should show a reasonable cost range or cost-impact estimate where
+   market research supports it. If reliable cost evidence is unavailable, the UI
+   should say so and treat the change as a negotiation item rather than a priced
+   estimate.
+
+   Once management accepts the changes, the system should draft a message to the
+   vendor. For the current stage, it should only draft the message; sending the
+   message can be a later workflow.
+
+   Example output:
+
+   ```text
+   selected vendor or shortlist
+     + adjusted feature values
+     + cost/risk impact estimate
+     + negotiation gaps
+     -> draft vendor clarification / negotiation message
+   ```
+
+The UI Guidance Agent should remain bounded by these rules:
+
+- It can suggest RFQ criteria and negotiation questions.
+- It can ask the recommender or market research services for structured advice.
+- It can draft messages for review.
+- It should not send vendor messages automatically.
+- It should not change accepted criteria without user confirmation.
+- It should not replace the deterministic Bid Recommendation Agent ranking.
 
 ---
 
