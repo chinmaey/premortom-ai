@@ -88,9 +88,9 @@ def research_bid_market(
         result = _coerce_json(_response_text(response))
         if not result:
             return _skipped("OpenAI web search returned no parseable JSON.")
-        result.setdefault("provider", PROVIDER)
-        result.setdefault("retrieved_at", _now())
-        result.setdefault("equipment_type", equipment_type)
+        result["provider"] = PROVIDER
+        result["retrieved_at"] = _now()
+        result["equipment_type"] = result.get("equipment_type") or equipment_type
         result.setdefault("limitations", [])
         return result
     except Exception as exc:
