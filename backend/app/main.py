@@ -20,10 +20,16 @@ from fastapi.responses import Response
 from .agents import extraction_agent
 from .agents.orchestrator import run_bid_evaluation, run_premortem
 from .models import PreMortemReport, ProcurementInput
-from .services import bid_outputs, document_parser, input_bids, report as report_service
+from .services import (
+    bid_outputs,
+    db_status,
+    document_parser,
+    input_bids,
+    report as report_service,
+)
 from .services.llm import has_api_key
 from .services.okf_memory import write_okf_memory_index
-from .services.okf_pgvector import index_okf_chunks_pgvector
+from .services.okf_pgvector import index_okf_chunks_pgvector, pgvector_index_config
 
 app = FastAPI(
     title="PreMortem AI",
@@ -57,7 +63,15 @@ def write_memory_indexes_on_startup() -> None:
     if os.getenv("OKF_INDEX_PGVECTOR", "0") in {"1", "true", "True"}:
         try:
             count = index_okf_chunks_pgvector()
-            print(f"Indexed {count} OKF memory chunks into pgvector.")
+            config = pgvector_index_config()
+            print(
+                "Indexed "
+                f"{count} OKF memory chunks into pgvector "
+                f"(embedding={config['embedding_method']}, "
+                f"dims={config['vector_dims']}, "
+                f"chunking={config['chunk_strategy']}, "
+                f"history_indexed={config['stores_history']})."
+            )
         except Exception as exc:
             print(f"Skipping pgvector OKF index: {exc}")
 
@@ -69,6 +83,11 @@ def health():
         "mode": "agentic" if has_api_key() else "offline (rule-based)",
         "service": "PreMortem AI",
     }
+
+
+@app.get("/db/status")
+def database_status():
+    return db_status.get_database_status()
 
 
 @app.get("/sample", response_model=ProcurementInput)

@@ -364,7 +364,99 @@ Output should include both:
 
 The Vendor / Proposal Understanding and External Risk Agent should not make the final quote recommendation. It prepares structured, evidence-backed inputs for downstream specialist agents and the Bid Recommendation Agent.
 
-##### 5. Compliance / Policy Agent
+##### 5. Internet / Market Research Agent
+
+The Internet / Market Research Agent should move from a future extension to a
+near-term agent because the Bid Recommendation Agent needs current market and
+specification context to compare vendor quotes fairly.
+
+This agent should be implemented first with OpenAI Responses API `web_search`.
+It is an LLM-backed agentic web research service: the model uses the web search
+tool, interprets retrieved information, and returns structured benchmark
+signals. It is not a deterministic search program.
+
+Primary responsibilities:
+
+- Search current market/specification context for the procurement category.
+- Identify expected market price ranges when reliable public information exists.
+- Identify typical delivery timelines.
+- Identify typical advance payment, retention, and milestone-payment practices.
+- Identify typical warranty-start triggers.
+- Identify installation, commissioning, and acceptance responsibility norms.
+- Identify whether training is normally included.
+- Identify common service SLA expectations such as response, resolution, spare
+  parts, preventive maintenance, uptime, remedies, and exclusions.
+- Identify consumables, recurring supplies, software subscriptions, service
+  kits, spare parts, and lifecycle-cost dependencies where relevant.
+- Identify current market facts, supply constraints, technology lifecycle
+  changes, or future trends that may not be present in the base LLM model.
+- Identify relevant regulatory, certification, or compliance expectations.
+- Identify public vendor/product reputation signals, adverse news, debarment, or
+  dispute indicators when available.
+
+This agent should return structured, source-aware output, not raw web pages.
+Every benchmark claim should include source URLs and retrieval timestamp where
+possible. If source quality is weak or market data is unavailable, the agent
+should state limitations instead of inventing values.
+
+Expected artifact:
+
+```text
+artifact_market_research
+```
+
+Suggested output shape:
+
+```json
+{
+  "provider": "openai_web_search",
+  "retrieved_at": "...",
+  "equipment_type": "...",
+  "market_price_range": {
+    "summary": "...",
+    "confidence": "low|medium|high",
+    "sources": ["..."]
+  },
+  "typical_terms": {
+    "delivery_timeline": "...",
+    "advance_payment": "...",
+    "warranty_start": "...",
+    "installation": "...",
+    "training": "...",
+    "service_sla": "..."
+  },
+  "consumables_and_lifecycle_costs": {
+    "summary": "...",
+    "known_consumables": ["..."],
+    "recurring_cost_risks": ["..."],
+    "sources": ["..."],
+    "confidence": "low|medium|high"
+  },
+  "current_market_or_future_trends": {
+    "summary": "...",
+    "signals": ["..."],
+    "sources": ["..."],
+    "confidence": "low|medium|high"
+  },
+  "red_flags": ["..."],
+  "limitations": ["..."]
+}
+```
+
+Guardrails:
+
+- Use current quote and bid requirements as primary evidence.
+- Treat internet research as benchmark context, not proof that a quote is good
+  or bad.
+- Do not override hard blockers from contract review, compliance, or management
+  criteria.
+- Store research output as a run artifact so the recommender and auditors can
+  see what external context was used.
+- Keep provider logic in a backend service such as
+  `backend/app/services/market_research.py`, so a future MCP provider can
+  replace OpenAI web search without changing the recommender interface.
+
+##### 6. Compliance / Policy Agent
 
 Checks:
 
@@ -376,7 +468,7 @@ Checks:
 
 This may be important for government, restricted-domain, or enterprise procurement use cases.
 
-##### 6. Bid Recommendation Agent
+##### 7. Bid Recommendation Agent
 
 The Bid Recommendation Agent is the decision integrator for a bidding process. It compares multiple vendor quotes within one bid and recommends the best quote or shortlist.
 
@@ -396,6 +488,7 @@ Future inputs:
 - Compliance / Policy Agent outputs.
 - Vendor / External Risk Agent outputs.
 - Internet / Market Research Agent outputs.
+- MCP-based external research outputs for current market/specification checks.
 - Historical procurement examples.
 - Human reviewer comments or overrides.
 
@@ -416,6 +509,131 @@ The Bid Recommendation Agent is different from the Decision Summary Agent:
 - Decision Summary Agent converts evaluator-approved results into a business-friendly report and approval package.
 
 The first implementation can use a simple ranking strategy based on Contract Review Agent outputs and dataset metadata. Later, the same agent input schema can accept internet, vendor, benchmark, compliance, and historical signals without changing the UI or graph API contract.
+
+MCP and internet-based research should be treated as an external signal layer,
+not as the recommender's core decision logic. The Bid Recommendation Agent can
+ask a Market Intelligence or MCP Research tool for structured signals such as:
+
+- Current market price range for the equipment or service.
+- Typical delivery timelines.
+- Typical advance payment and retention practices.
+- Common warranty-start trigger, such as delivery, installation, commissioning,
+  or acceptance.
+- Expected installation and commissioning responsibility.
+- Typical training inclusion.
+- Common service SLA terms such as response time, resolution time, spare parts,
+  uptime, preventive maintenance, and remedies.
+- Regulatory or certification expectations.
+- Vendor/product reputation signals and public adverse-news/debarment signals
+  where available.
+- Comparable procurement examples.
+
+The output of this research layer should be structured and source-aware, for
+example:
+
+```json
+{
+  "market_price_range": "...",
+  "typical_delivery_timeline": "...",
+  "typical_warranty_start": "...",
+  "typical_training_expectation": "...",
+  "source_urls": ["..."],
+  "retrieved_at": "..."
+}
+```
+
+The recommender should compare these external signals against each quote, but
+it should keep current quote evidence separate from internet evidence. Internet
+research can highlight unusual terms or missing information, but it should not
+override hard blockers from contract review, compliance, or current bid
+requirements. For repeatability, the research result should be stored as a run
+artifact and later as decision-history context.
+
+First implementation recommendation: use OpenAI's Responses API `web_search`
+tool as the market/specification research provider. This is simpler than
+running a separate MCP server and is enough for the first demo version.
+
+```text
+Bid Recommender Agent
+  -> Market Research Service
+      -> OpenAI Responses API with web_search
+      -> structured market/specification benchmark JSON
+      -> artifact_market_research
+  -> deterministic ranking and guardrails
+  -> optional LLM explanation
+```
+
+The Market Research Service should live in a backend service module rather than
+inside the recommender agent directly, for example:
+
+```text
+backend/app/services/market_research.py
+```
+
+The service should accept a compact query object:
+
+```json
+{
+  "bid_id": "BID-001",
+  "equipment_type": "MRI Machine",
+  "procurement_name": "MRI Machine Procurement",
+  "quote_summaries": [
+    {
+      "quote_id": "BID-001-Q01",
+      "vendor_name": "...",
+      "quoted_amount": "...",
+      "delivery_timeline": "...",
+      "warranty_start": "...",
+      "training_included": false,
+      "service_terms": "..."
+    }
+  ]
+}
+```
+
+And return a bounded, source-aware benchmark object:
+
+```json
+{
+  "provider": "openai_web_search",
+  "retrieved_at": "...",
+  "equipment_type": "MRI Machine",
+  "market_price_range": {
+    "summary": "...",
+    "confidence": "low|medium|high",
+    "sources": ["..."]
+  },
+  "typical_terms": {
+    "delivery_timeline": "...",
+    "advance_payment": "...",
+    "warranty_start": "...",
+    "training": "...",
+    "service_sla": "..."
+  },
+  "red_flags": [
+    "..."
+  ],
+  "limitations": [
+    "..."
+  ]
+}
+```
+
+Guardrails for this service:
+
+- Use web search only when `MARKET_RESEARCH_ENABLED=1`.
+- Keep API/provider logic centralized in the backend service.
+- Return an empty or offline result when no API key is configured.
+- Store the result as a run artifact for repeatability.
+- Include source URLs and retrieval timestamp for every benchmark claim where
+  possible.
+- Do not pass raw web pages directly to the recommender.
+- Do not let market research override hard blockers from current quote evidence.
+
+Future implementation: replace or augment `market_research.py` with an MCP
+provider. The recommender should not care whether the benchmark came from
+OpenAI `web_search`, AWS MCP search, or a custom MCP server as long as the
+service returns the same structured benchmark schema.
 
 ---
 
@@ -683,6 +901,21 @@ Later, replace the temporary local feature vector with a stronger local
 embedding model such as SentenceTransformers, while keeping the same table and
 retrieval interface.
 
+Implementation details for the current version:
+
+- Indexed data: OKF agent memory only. Bid/run history is not written to
+  pgvector yet.
+- Chunking strategy: one OKF Markdown file becomes one vector chunk.
+- Embedding method: `local_hashing_vector_v1`, a deterministic 32-dimensional
+  local feature vector.
+- Normalization: L2 normalization is applied so longer files do not dominate
+  similarity only because they contain more tokens.
+- Retrieval output: pgvector is used to choose relevant chunks, but the LLM
+  still receives the selected plain-text OKF content, not the numeric vectors.
+- Upgrade path: replace the temporary local hashing vector with a local semantic
+  embedding model and optionally split larger Markdown files by heading or
+  section.
+
 ### 6.2 Contract Review Agent Memory Example
 
 For the Contract Review Agent, long-term memory should contain:
@@ -783,20 +1016,52 @@ Current case
 
 Decision history is not the same as prompt memory. It should be treated as a long-term evidence store.
 
-Decision history should capture:
+Decision history should capture enough information to explain and replay why a
+recommendation was made. It should store both the static inputs provided by the
+user and the learned or retrieved context that influenced the decision.
 
-- Case ID.
-- Date and time.
-- Procurement input.
-- Uploaded document metadata.
-- Extracted document text or document references.
-- Agent outputs and risk scores.
-- Final recommendation.
+The decision snapshot should include:
+
+- Case ID, run ID, date, and time.
+- Static procurement input: title, category, department, location, budget,
+  timeline, equipment or service type, project criticality, site readiness,
+  workforce readiness, regulatory requirements, and raw form fields.
+- Vendor and quote inputs: quote ID, vendor name, quoted amount, advance
+  payment, delivery timeline, warranty start, installation responsibility,
+  training commitment, service response terms, local service availability, and
+  source document metadata.
+- Extracted document text, selected excerpts, or durable document references.
+- Static evaluation parameters: criteria version, rubric version, risk
+  thresholds, scoring weights, agent/profile version, prompt version, and memory
+  version where available.
+- Learned or retrieved context: OKF memory chunks retrieved, historical examples
+  used, future decision-history chunks retrieved, similarity scores, retrieval
+  metadata, and any reviewer preference or policy override used later.
+- Specialist agent outputs: contract risk, infrastructure readiness, workforce
+  readiness, historical intelligence, financial exposure, decision board,
+  debate turns, and scenario simulations.
+- Final decision: selected quote or vendor, risk score, risk level,
+  recommendation, findings, rationale, conditions before award, and
+  approve/revise/reject status if the workflow captures it.
 - Human decision or override.
 - Actual outcome when known.
 - Delay, failure, or success labels.
-- Model/provider used.
-- Version of the agent memory or rubric used.
+- Audit metadata: model/provider used, offline fallback status, app or git
+  version if available, and whether LLM calls succeeded.
+
+The vector-search layer should store a compact text representation of the
+decision rather than only the final recommendation. For example, one completed
+review may produce several `decision_history_chunks` rows:
+
+- Procurement summary.
+- Winning decision summary.
+- Risk findings summary.
+- Vendor or quote summary.
+- Outcome summary when the real-world result is known.
+
+Keep these rows separate from `agent_memory_chunks`. Agent memory is stable
+guidance about how the agent should think; decision history is evidence about
+what happened in previous cases.
 
 This can be stored in a database or vector-enabled store. The important rule is that the agent should not access all decision history all the time. It should query decision history only when needed, similar to how an application uses a database and cache.
 
@@ -804,15 +1069,108 @@ For example:
 
 ```text
 Decision history database
-  -> exact filters by date, department, vendor, contract type, risk score
-  -> vector search for semantically similar prior cases
-  -> top relevant cases only
+  -> bounded recent history, such as last 10 completed decisions
+  -> same-vendor history, such as last 5 decisions for the same vendor
+  -> same-category history, such as last 5 decisions for the same equipment type
+  -> vector search over decision_history_chunks for similar risk patterns
+  -> compact relevant cases only
   -> selected evidence snippets passed to the agent
 ```
 
+The prompt-size limit should be a final formatting guard, not the retrieval
+strategy. Important factors should be selected first through metadata filters
+and pgvector similarity. The current implementation uses a hybrid selector:
+recent global decisions, same-vendor decisions, same-category decisions, and
+vector-similar risk-pattern chunks.
+
 This design preserves auditability and avoids noisy historical decisions polluting current reasoning.
 
-### 6.5 Learning Loop
+### 6.5 Bid Recommendation Agent Memory
+
+The Bid Recommendation Agent needs a different memory design from the Contract
+Review Agent. The Contract Review Agent uses memory to spot contract-risk
+patterns within one quote. The Bid Recommendation Agent should use memory to
+compare multiple quotes, vendors, and tradeoffs within one bid.
+
+The recommender should have three memory inputs:
+
+1. **Short-term bid memory**
+   - Current bid ID.
+   - All quote IDs included in the run.
+   - Vendor proposal artifacts.
+   - Contract Review Agent outputs for each quote.
+   - Future cost, compliance, vendor-risk, market-research, and evaluator
+     outputs.
+   - Management criteria and weights where available.
+
+2. **Decision-history memory**
+   - Prior winning quote patterns.
+   - Prior shortlist patterns.
+   - Same-vendor outcomes and repeated vendor issues.
+   - Same-category quote comparisons.
+   - Reviewer overrides and human feedback when available.
+   - Similar bid outcomes retrieved from `decision_history` and
+     `decision_history_chunks`.
+
+3. **External market/specification memory**
+   - MCP or internet research results stored as structured run artifacts.
+   - Market price ranges.
+   - Typical delivery, warranty, training, service, and payment practices.
+   - Relevant regulatory or certification expectations.
+   - Source URLs, retrieval timestamp, and confidence/quality notes.
+   - Enabled explicitly with a setting such as `MARKET_RESEARCH_ENABLED=1`.
+
+The recommender should not directly consume unbounded raw history or raw web
+pages. It should receive compact, structured comparison signals. A future
+retrieval policy can combine:
+
+```text
+Current bid quote reviews
+  + minimum management criteria
+  + management criteria weights
+  + same-vendor decision history
+  + same-category decision history
+  + vector-similar prior bid outcomes
+  + source-aware market/specification benchmarks
+  -> deterministic ranking and guardrails
+  -> optional LLM explanation
+```
+
+The deterministic ranking should remain separate from the optional LLM
+explanation. The LLM may improve rationale, feedback, and negotiation language,
+but it should not silently change the winner, shortlist, or score components.
+
+Minimum qualification criteria should be checked before ranking. Initially,
+these criteria should come from management or bid setup: mandatory
+specifications, budget ceiling, delivery deadline, warranty/service
+requirements, installation/commissioning responsibilities, training, local
+support, and required certifications. Later, internet or MCP research can
+augment these criteria with current market ranges and future trends, but it
+should not replace management's stated decision priorities.
+
+Cutoffs should be modeled inside ranking rather than as a single automatic
+reject rule. Some cutoff failures are hard blockers, such as legal,
+regulatory, safety, certification, or mandatory eligibility failures. Other
+below-cutoff features may be negotiable gaps, such as high advance payment,
+unclear warranty trigger, missing training, incomplete SLA, or unclear
+installation responsibility. A quote with negotiable gaps can remain in a
+shortlist if it is otherwise strong, but the recommender must mark it as
+`shortlist with conditions`, list the required negotiation fixes, and route it
+for human review when needed.
+
+Current implementation note: the Bid Recommender Agent now has an OKF-style
+profile under:
+
+```text
+backend/agent_profiles/bid_recommender_agent_profile/
+```
+
+This memory contains ranking, guardrail, external-signal, and tie-breaker
+guidance. In the current implementation, it is loaded only into the optional LLM
+explanation path. The deterministic ranking still uses explicit code and should
+remain stable across runs.
+
+### 6.6 Learning Loop
 
 Short-term decisions and decision history can produce learning, but the system should not automatically rewrite long-term memory after every case.
 
@@ -838,7 +1196,7 @@ For medical equipment contracts, explicitly review installation readiness, calib
 
 This lesson can then be added to `sectors/medical_equipment.md` or `curated_lessons.md`.
 
-### 6.6 Implementation Decision
+### 6.7 Implementation Decision
 
 For the next implementation, the architecture should use:
 

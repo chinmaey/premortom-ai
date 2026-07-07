@@ -21,6 +21,8 @@ from .okf_memory import OkfMemoryChunk, load_okf_chunks
 
 
 VECTOR_DIMS = 32
+EMBEDDING_METHOD = "local_hashing_vector_v1"
+CHUNK_STRATEGY = "one_okf_markdown_file_per_chunk"
 
 
 def index_okf_chunks_pgvector(agent_id: str = "contract_agent") -> int:
@@ -69,6 +71,17 @@ def index_okf_chunks_pgvector(agent_id: str = "contract_agent") -> int:
                 )
         conn.commit()
     return len(chunks)
+
+
+def pgvector_index_config() -> dict[str, object]:
+    """Return human-readable configuration for logs/debugging."""
+    return {
+        "embedding_method": EMBEDDING_METHOD,
+        "vector_dims": VECTOR_DIMS,
+        "chunk_strategy": CHUNK_STRATEGY,
+        "stores_history": False,
+        "stores_okf_memory": True,
+    }
 
 
 def search_okf_chunks_pgvector(

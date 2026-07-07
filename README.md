@@ -72,7 +72,54 @@ docker compose up --build
 
 - UI:      http://localhost:8501
 - API docs: http://localhost:8000/docs
-- Docker uses pgvector-enabled Postgres and indexes OKF memory on backend startup.
+- Docker DB from host: `localhost:5433`
+- Docker uses pgvector-enabled Postgres, indexes OKF memory on backend startup,
+  and stores completed bid decision history in Postgres.
+- Optional market research uses OpenAI Responses API `web_search` when
+  `MARKET_RESEARCH_ENABLED=1` and `OPENAI_API_KEY` is configured.
+
+In a second terminal, verify the Docker backend is healthy:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+Run the bid contract-review integration test against the Docker backend:
+
+```bash
+python backend/tests/test_contract_review.py --api http://127.0.0.1:8000 --bid-id BID-001
+```
+
+Check pgvector/Postgres tables inside Docker:
+
+```bash
+docker compose exec db psql -U premortem -d premortem -c "\dt"
+docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM agent_memory_chunks;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history_chunks;"
+```
+
+From the host machine, connect to the Docker database on port `5433`:
+
+```bash
+psql "postgresql://premortem:premortem@127.0.0.1:5433/premortem"
+```
+
+Do not use host port `5432` for Docker checks unless you changed
+`docker-compose.yml`; `5432` may be your local PostgreSQL.
+
+Database URL choices:
+
+```env
+# Docker backend -> Docker db
+DATABASE_URL=postgresql://premortem:premortem@db:5432/premortem
+
+# Local backend -> Docker db exposed on host port 5433
+DATABASE_URL=postgresql://premortem:premortem@127.0.0.1:5433/premortem
+
+# Local backend -> local Postgres on host port 5432
+DATABASE_URL=postgresql://premortem:premortem@127.0.0.1:5432/premortem
+```
 
 ### Option B — Local (two terminals)
 
@@ -82,16 +129,29 @@ cd premortem-ai/backend
 python -m venv .venv && . .venv/Scripts/activate   # Windows
 # source .venv/bin/activate                         # macOS/Linux
 pip install -r requirements.txt
-export OKF_MEMORY_ROOT="$PWD/agent_profiles/contract_agent_profile"  # macOS/Linux
-export OKF_WRITE_MEMORY_INDEX=1                                      # macOS/Linux
-# export OKF_INDEX_PGVECTOR=1                                        # optional, requires local pgvector Postgres
-# export OKF_USE_PGVECTOR_RETRIEVAL=1                                # optional, requires indexed pgvector memory
-# set OKF_MEMORY_ROOT=%CD%\agent_profiles\contract_agent_profile   # Windows cmd
-# set OKF_WRITE_MEMORY_INDEX=1                                      # Windows cmd
-# set OKF_INDEX_PGVECTOR=1                                          # optional, requires local pgvector Postgres
-# set OKF_USE_PGVECTOR_RETRIEVAL=1                                  # optional, requires indexed pgvector memory
-uvicorn app.main:app --reload --port 8000
+python run_backend.py
 ```
+
+For local pgvector-backed OKF memory, install PostgreSQL + pgvector once, then
+run:
+
+```bash
+cd premortem-ai/backend
+python setup_pgvector.py
+```
+
+Useful local PostgreSQL checks:
+
+```bash
+sudo systemctl status postgresql
+pg_lsclusters
+sudo ss -ltnp | grep 5432
+psql "postgresql://premortem:premortem@localhost:5432/premortem" -c "\dt"
+```
+
+On Ubuntu, `postgresql.service` may show `active (exited)` while the actual
+cluster is still online. Use `pg_lsclusters` to confirm the cluster status and
+port.
 
 Backend HTTP API:
 
@@ -107,7 +167,10 @@ streamlit run app.py
 ```
 
 The backend and frontend load `../.env` automatically for local runs. Values
-already exported in your shell or provided by Docker still take precedence.
+already exported in your shell or provided by Docker still take precedence. For
+local backend runs, keep OKF and pgvector settings centralized in the repository
+root `.env`; `backend/run_backend.py` fills in local path defaults and starts
+uvicorn.
 `OKF_MEMORY_ROOT` enables the contract agent's durable memory bundle during
 backend runs. `OKF_WRITE_MEMORY_INDEX=1` writes a plain-text metadata index to
 `backend/agent_profiles/contract_agent_profile/contract_agent_memory_index.json`
