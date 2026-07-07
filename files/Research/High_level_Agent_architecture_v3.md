@@ -364,7 +364,82 @@ Output should include both:
 
 The Vendor / Proposal Understanding and External Risk Agent should not make the final quote recommendation. It prepares structured, evidence-backed inputs for downstream specialist agents and the Bid Recommendation Agent.
 
-##### 5. Compliance / Policy Agent
+##### 5. Internet / Market Research Agent
+
+The Internet / Market Research Agent should move from a future extension to a
+near-term agent because the Bid Recommendation Agent needs current market and
+specification context to compare vendor quotes fairly.
+
+This agent should be implemented first with OpenAI Responses API `web_search`.
+It is an LLM-backed agentic web research service: the model uses the web search
+tool, interprets retrieved information, and returns structured benchmark
+signals. It is not a deterministic search program.
+
+Primary responsibilities:
+
+- Search current market/specification context for the procurement category.
+- Identify expected market price ranges when reliable public information exists.
+- Identify typical delivery timelines.
+- Identify typical advance payment, retention, and milestone-payment practices.
+- Identify typical warranty-start triggers.
+- Identify installation, commissioning, and acceptance responsibility norms.
+- Identify whether training is normally included.
+- Identify common service SLA expectations such as response, resolution, spare
+  parts, preventive maintenance, uptime, remedies, and exclusions.
+- Identify relevant regulatory, certification, or compliance expectations.
+- Identify public vendor/product reputation signals, adverse news, debarment, or
+  dispute indicators when available.
+
+This agent should return structured, source-aware output, not raw web pages.
+Every benchmark claim should include source URLs and retrieval timestamp where
+possible. If source quality is weak or market data is unavailable, the agent
+should state limitations instead of inventing values.
+
+Expected artifact:
+
+```text
+artifact_market_research
+```
+
+Suggested output shape:
+
+```json
+{
+  "provider": "openai_web_search",
+  "retrieved_at": "...",
+  "equipment_type": "...",
+  "market_price_range": {
+    "summary": "...",
+    "confidence": "low|medium|high",
+    "sources": ["..."]
+  },
+  "typical_terms": {
+    "delivery_timeline": "...",
+    "advance_payment": "...",
+    "warranty_start": "...",
+    "installation": "...",
+    "training": "...",
+    "service_sla": "..."
+  },
+  "red_flags": ["..."],
+  "limitations": ["..."]
+}
+```
+
+Guardrails:
+
+- Use current quote and bid requirements as primary evidence.
+- Treat internet research as benchmark context, not proof that a quote is good
+  or bad.
+- Do not override hard blockers from contract review, compliance, or management
+  criteria.
+- Store research output as a run artifact so the recommender and auditors can
+  see what external context was used.
+- Keep provider logic in a backend service such as
+  `backend/app/services/market_research.py`, so a future MCP provider can
+  replace OpenAI web search without changing the recommender interface.
+
+##### 6. Compliance / Policy Agent
 
 Checks:
 
@@ -376,7 +451,7 @@ Checks:
 
 This may be important for government, restricted-domain, or enterprise procurement use cases.
 
-##### 6. Bid Recommendation Agent
+##### 7. Bid Recommendation Agent
 
 The Bid Recommendation Agent is the decision integrator for a bidding process. It compares multiple vendor quotes within one bid and recommends the best quote or shortlist.
 
@@ -456,6 +531,92 @@ research can highlight unusual terms or missing information, but it should not
 override hard blockers from contract review, compliance, or current bid
 requirements. For repeatability, the research result should be stored as a run
 artifact and later as decision-history context.
+
+First implementation recommendation: use OpenAI's Responses API `web_search`
+tool as the market/specification research provider. This is simpler than
+running a separate MCP server and is enough for the first demo version.
+
+```text
+Bid Recommender Agent
+  -> Market Research Service
+      -> OpenAI Responses API with web_search
+      -> structured market/specification benchmark JSON
+      -> artifact_market_research
+  -> deterministic ranking and guardrails
+  -> optional LLM explanation
+```
+
+The Market Research Service should live in a backend service module rather than
+inside the recommender agent directly, for example:
+
+```text
+backend/app/services/market_research.py
+```
+
+The service should accept a compact query object:
+
+```json
+{
+  "bid_id": "BID-001",
+  "equipment_type": "MRI Machine",
+  "procurement_name": "MRI Machine Procurement",
+  "quote_summaries": [
+    {
+      "quote_id": "BID-001-Q01",
+      "vendor_name": "...",
+      "quoted_amount": "...",
+      "delivery_timeline": "...",
+      "warranty_start": "...",
+      "training_included": false,
+      "service_terms": "..."
+    }
+  ]
+}
+```
+
+And return a bounded, source-aware benchmark object:
+
+```json
+{
+  "provider": "openai_web_search",
+  "retrieved_at": "...",
+  "equipment_type": "MRI Machine",
+  "market_price_range": {
+    "summary": "...",
+    "confidence": "low|medium|high",
+    "sources": ["..."]
+  },
+  "typical_terms": {
+    "delivery_timeline": "...",
+    "advance_payment": "...",
+    "warranty_start": "...",
+    "training": "...",
+    "service_sla": "..."
+  },
+  "red_flags": [
+    "..."
+  ],
+  "limitations": [
+    "..."
+  ]
+}
+```
+
+Guardrails for this service:
+
+- Use web search only when `MARKET_RESEARCH_ENABLED=1`.
+- Keep API/provider logic centralized in the backend service.
+- Return an empty or offline result when no API key is configured.
+- Store the result as a run artifact for repeatability.
+- Include source URLs and retrieval timestamp for every benchmark claim where
+  possible.
+- Do not pass raw web pages directly to the recommender.
+- Do not let market research override hard blockers from current quote evidence.
+
+Future implementation: replace or augment `market_research.py` with an MCP
+provider. The recommender should not care whether the benchmark came from
+OpenAI `web_search`, AWS MCP search, or a custom MCP server as long as the
+service returns the same structured benchmark schema.
 
 ---
 
@@ -940,6 +1101,7 @@ The recommender should have three memory inputs:
    - Typical delivery, warranty, training, service, and payment practices.
    - Relevant regulatory or certification expectations.
    - Source URLs, retrieval timestamp, and confidence/quality notes.
+   - Enabled explicitly with a setting such as `MARKET_RESEARCH_ENABLED=1`.
 
 The recommender should not directly consume unbounded raw history or raw web
 pages. It should receive compact, structured comparison signals. A future
@@ -947,6 +1109,8 @@ retrieval policy can combine:
 
 ```text
 Current bid quote reviews
+  + minimum management criteria
+  + management criteria weights
   + same-vendor decision history
   + same-category decision history
   + vector-similar prior bid outcomes
@@ -958,6 +1122,24 @@ Current bid quote reviews
 The deterministic ranking should remain separate from the optional LLM
 explanation. The LLM may improve rationale, feedback, and negotiation language,
 but it should not silently change the winner, shortlist, or score components.
+
+Minimum qualification criteria should be checked before ranking. Initially,
+these criteria should come from management or bid setup: mandatory
+specifications, budget ceiling, delivery deadline, warranty/service
+requirements, installation/commissioning responsibilities, training, local
+support, and required certifications. Later, internet or MCP research can
+augment these criteria with current market ranges and future trends, but it
+should not replace management's stated decision priorities.
+
+Cutoffs should be modeled inside ranking rather than as a single automatic
+reject rule. Some cutoff failures are hard blockers, such as legal,
+regulatory, safety, certification, or mandatory eligibility failures. Other
+below-cutoff features may be negotiable gaps, such as high advance payment,
+unclear warranty trigger, missing training, incomplete SLA, or unclear
+installation responsibility. A quote with negotiable gaps can remain in a
+shortlist if it is otherwise strong, but the recommender must mark it as
+`shortlist with conditions`, list the required negotiation fixes, and route it
+for human review when needed.
 
 Current implementation note: the Bid Recommender Agent now has an OKF-style
 profile under:
