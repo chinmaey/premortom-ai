@@ -75,6 +75,8 @@ docker compose up --build
 - Docker DB from host: `localhost:5433`
 - Docker uses pgvector-enabled Postgres, indexes OKF memory on backend startup,
   and stores completed bid decision history in Postgres.
+- Optional market research uses OpenAI Responses API `web_search` when
+  `MARKET_RESEARCH_ENABLED=1` and `OPENAI_API_KEY` is configured.
 
 In a second terminal, verify the Docker backend is healthy:
 
@@ -106,6 +108,19 @@ psql "postgresql://premortem:premortem@127.0.0.1:5433/premortem"
 Do not use host port `5432` for Docker checks unless you changed
 `docker-compose.yml`; `5432` may be your local PostgreSQL.
 
+Database URL choices:
+
+```env
+# Docker backend -> Docker db
+DATABASE_URL=postgresql://premortem:premortem@db:5432/premortem
+
+# Local backend -> Docker db exposed on host port 5433
+DATABASE_URL=postgresql://premortem:premortem@127.0.0.1:5433/premortem
+
+# Local backend -> local Postgres on host port 5432
+DATABASE_URL=postgresql://premortem:premortem@127.0.0.1:5432/premortem
+```
+
 ### Option B — Local (two terminals)
 
 **Backend**
@@ -124,6 +139,19 @@ run:
 cd premortem-ai/backend
 python setup_pgvector.py
 ```
+
+Useful local PostgreSQL checks:
+
+```bash
+sudo systemctl status postgresql
+pg_lsclusters
+sudo ss -ltnp | grep 5432
+psql "postgresql://premortem:premortem@localhost:5432/premortem" -c "\dt"
+```
+
+On Ubuntu, `postgresql.service` may show `active (exited)` while the actual
+cluster is still online. Use `pg_lsclusters` to confirm the cluster status and
+port.
 
 Backend HTTP API:
 
