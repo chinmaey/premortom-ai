@@ -12,15 +12,24 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-BACKEND_ROOT = REPO_ROOT / "backend"
+TEST_PATH = Path(__file__).resolve()
+if (TEST_PATH.parents[1] / "app").is_dir():
+    BACKEND_ROOT = TEST_PATH.parents[1]
+    REPO_ROOT = BACKEND_ROOT.parent
+else:
+    REPO_ROOT = TEST_PATH.parents[2]
+    BACKEND_ROOT = REPO_ROOT / "backend"
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.agents.vendor_proposal_agent import analyze_pdf_path  # noqa: E402
 
 
-DEFAULT_PDF = REPO_ROOT / "files/input/samples/bids/BID-001/BID-001-Q01.pdf"
+DEFAULT_PDF = (
+    Path("/files/input/samples/bids/BID-001/BID-001-Q01.pdf")
+    if Path("/files/input/samples").is_dir()
+    else REPO_ROOT / "files/input/samples/bids/BID-001/BID-001-Q01.pdf"
+)
 
 
 def main() -> int:

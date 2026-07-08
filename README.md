@@ -90,6 +90,31 @@ Run the bid contract-review integration test against the Docker backend:
 python backend/tests/test_contract_review.py --api http://127.0.0.1:8000 --bid-id BID-001
 ```
 
+Run the Vendor Proposal Agent helper inside Docker:
+
+```bash
+docker compose build backend
+docker compose up -d db backend
+docker compose exec backend python tests/test_vendor_proposal_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+Run the full bid-evaluation unittest inside Docker:
+
+```bash
+docker compose exec backend env RUN_BID_EVAL_TESTS=1 BID_ID=BID-001 MAX_QUOTES_PER_BID=1 python -m unittest tests.test_bid_evaluation
+```
+
+Inspect the newest vendor proposal artifact:
+
+```bash
+ls -td files/output/bid_runs/RUN-* | head -1
+cat files/output/bid_runs/RUN-XXX/vendor_proposal_agent_quote_intelligence.json
+```
+
+Replace `RUN-XXX` with the newest run id. Rebuild the backend image after code
+or test-helper changes because Docker copies `backend/app`, `backend/tests`, and
+`backend/agent_profiles` at build time.
+
 Check pgvector/Postgres tables inside Docker:
 
 ```bash

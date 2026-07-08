@@ -62,6 +62,28 @@ Skip rescanning the input folder:
 python backend/tests/test_contract_review.py --bid-id BID-001 --skip-scan
 ```
 
+## Vendor Proposal Agent
+
+Run the Vendor Proposal Agent directly on the sample quote PDF:
+
+```bash
+python backend/tests/test_vendor_proposal_agent.py --pdf files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+Run the same helper inside Docker:
+
+```bash
+docker compose build backend
+docker compose up -d db backend
+docker compose exec backend python tests/test_vendor_proposal_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+Run the capped bid-evaluation unittest inside Docker:
+
+```bash
+docker compose exec backend env RUN_BID_EVAL_TESTS=1 BID_ID=BID-001 MAX_QUOTES_PER_BID=1 python -m unittest tests.test_bid_evaluation
+```
+
 ## API Flow
 
 The script calls:
