@@ -225,8 +225,107 @@ management expectation profile
   -> weighted preferences
   -> budget and tolerance
   -> negotiable feature ranges
-  -> RFQ draft inputs
+	  -> RFQ draft inputs
+	```
+
+#### Backend and Frontend API Requirement
+
+The first API/UI implementation should expose this agent through a dedicated
+backend endpoint and a new Streamlit page. The current `Screen 1 - Procurement
+Input` should remain unchanged.
+
+Backend endpoint:
+
+```text
+POST /ui-guidance/rfq-negotiation
 ```
+
+Request shape:
+
+```json
+{
+  "mode": "rfq_intake|negotiation",
+  "role": "management|doctor|technician|biomedical_engineer|procurement_officer",
+  "free_text": "Open-ended requirement, concern, or negotiation question.",
+  "static_inputs": {
+    "procurement_name": "MRI Machine Procurement",
+    "equipment_type": "MRI Machine",
+    "budget_cr": 18.0,
+    "budget_tolerance_pct": 10.0,
+    "delivery_timeline_months": 6.0,
+    "warranty_start": "On Commissioning",
+    "installation_responsibility": "Vendor",
+    "training_required": true,
+    "service_response_hours": 12,
+    "site_readiness_pct": 80,
+    "patient_volume": "",
+    "clinical_use_cases": []
+  },
+  "feature_weights": {
+    "technical_capability": 25,
+    "price": 20,
+    "delivery": 10,
+    "warranty": 15,
+    "service_sla": 15,
+    "training": 10,
+    "lifecycle_cost": 5
+  },
+  "minimum_criteria": [],
+  "negotiable_criteria": [],
+  "bid_id": "",
+  "quote_id": "",
+  "vendor_proposal": {},
+  "store_history": true
+}
+```
+
+Response shape:
+
+```json
+{
+  "agent": "RFQ Intake and Negotiation UI Guidance Agent",
+  "status": "completed",
+  "mode": "rfq_intake|negotiation",
+  "rfq_intake": {
+    "requirement_summary": "",
+    "suggested_requirements": [],
+    "minimum_criteria": [],
+    "negotiable_criteria": [],
+    "missing_inputs": []
+  },
+  "negotiation_guidance": {
+    "negotiation_questions": [],
+    "contract_conditions": [],
+    "cost_or_lifecycle_items": [],
+    "vendor_message_draft": ""
+  },
+  "feature_weight_feedback": [],
+  "evidence": [],
+  "guardrails": [],
+  "history": {
+    "stored": true,
+    "run_id": "UI-..."
+  }
+}
+```
+
+Frontend page requirement:
+
+- Add a new page or tab named `RFQ / Negotiation Guidance`.
+- Reuse the familiar layout patterns from `Screen 1 - Procurement Input`, but
+  capture expectation values rather than vendor proposal values.
+- Include role selection.
+- Include free-text input for requirements, concerns, or negotiation questions.
+- Include numeric feature weights that sum to 100 where practical.
+- Include hard minimum criteria and negotiable criteria inputs.
+- Allow optional `bid_id` and `quote_id` selection later so negotiation mode can
+  load Vendor Proposal Agent intelligence.
+- Display returned RFQ recommendations, missing inputs, negotiation questions,
+  contract conditions, lifecycle-cost items, draft vendor message, evidence, and
+  guardrails.
+- Persist UI Guidance Agent output to `agent_history` / `agent_history_chunks`
+  when `store_history=true`, even though this helper does not create a
+  `RUN-XXX` bid-run directory.
 
 #### Chat Guidance Component
 
