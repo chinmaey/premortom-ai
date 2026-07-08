@@ -471,8 +471,25 @@ The proposal artifact should therefore track extraction metadata such as:
 Current implementation status:
 
 - Deterministic PDF text extraction exists.
-- Vendor / Proposal Understanding Agent is designed but not implemented yet.
-- Until the Vendor Agent is implemented, the Contract Review Agent reads `raw_document_text` directly.
+- Vendor / Proposal Understanding Agent now has minimum backend functionality.
+- It reads the quote PDF text, extracts fixed comparable fields, and writes
+  proposal intelligence into `vendor_proposal_agent_quote_intelligence.json`.
+- Current fixed fields include vendor identity, legal entity, contact details,
+  procurement/equipment type, quoted price, advance payment, delivery timeline,
+  warranty start, installation responsibility, training flag, service response,
+  local service team, compliance claims, references, and years in operation when
+  visible in the quote text.
+- Current proposal intelligence includes vendor profile, commercial terms,
+  delivery/installation terms, warranty/service terms, training/handover,
+  differentiators, omissions or ambiguities, unusual terms, proposal quality,
+  follow-up questions, and evidence snippets.
+- The Contract Review Agent still reads `raw_document_text` directly for now,
+  but future iterations should pass the Vendor Proposal Agent's structured
+  output as additional context.
+- TODO: When the RFQ Intake and Negotiation UI Guidance Agent implements the
+  negotiation workflow, it should ask this Vendor Proposal Agent targeted
+  questions about vendor-specific evidence, omissions, contradictions,
+  lifecycle-cost gaps, and draft negotiation points.
 
 External/vendor-risk responsibilities:
 
