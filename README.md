@@ -136,6 +136,8 @@ docker compose exec db psql -U premortem -d premortem -c "\dt"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM agent_memory_chunks;"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history;"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history_chunks;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT agent_id, COUNT(*) AS rows FROM agent_history GROUP BY agent_id ORDER BY agent_id;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT agent_id, COUNT(*) AS chunks FROM agent_history_chunks GROUP BY agent_id ORDER BY agent_id;"
 ```
 
 From the host machine, connect to the Docker database on port `5433`:

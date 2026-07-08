@@ -1592,6 +1592,15 @@ Load core Markdown files
 
 This gives the demo a clear memory story without requiring complex infrastructure immediately.
 
+Future TODO: decentralize agents and data stores where it improves reliability,
+ownership, scaling, or integration boundaries. For the current demo, a single
+backend orchestrator and shared pgvector-enabled Postgres are simpler and easier
+to debug. Later, agents can be split into independent services or workers, and
+database ownership can be separated by domain, such as memory, decision history,
+agent history, invoice monitoring, and external research. This should be done
+only after the artifact contracts, agent-level history schema, and retrieval
+interfaces are stable.
+
 ---
 
 ## 7. Additional Future Agents

@@ -14,7 +14,12 @@ from ..services import document_parser
 from ..services.llm import has_api_key, run_agent_llm
 
 NAME = "Vendor Proposal Agent"
-PROFILE_PATH = Path(__file__).resolve().parents[2] / "agent_profiles" / "vendor_agent_profile.md"
+PROFILE_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "agent_profiles"
+    / "vendor_proposal_agent_profile"
+    / "profile.md"
+)
 MAX_LLM_TEXT_CHARS = 12000
 
 INSTRUCTIONS = """
