@@ -1110,8 +1110,8 @@ retrieval interface.
 
 Implementation details for the current version:
 
-- Indexed data: OKF agent memory only. Bid/run history is not written to
-  pgvector yet.
+- Indexed data: OKF agent memory in `agent_memory_chunks`, plus run-level
+  decision history in `decision_history` and `decision_history_chunks`.
 - Chunking strategy: one OKF Markdown file becomes one vector chunk.
 - Embedding method: `local_hashing_vector_v1`, a deterministic 32-dimensional
   local feature vector.
@@ -1292,7 +1292,174 @@ vector-similar risk-pattern chunks.
 
 This design preserves auditability and avoids noisy historical decisions polluting current reasoning.
 
-### 6.5 Bid Recommendation Agent Memory
+### 6.5 pgvector Database Schema and Agent-Level History Requirement
+
+The pgvector database should support three related but separate memory/history
+types:
+
+1. **Agent OKF memory**
+   - Stable profile, policy, pattern, and reference memory.
+   - Stored in `agent_memory_chunks`.
+   - Always scoped by `agent_id`.
+
+2. **Run-level decision history**
+   - Completed bid/run outcome and audit snapshot.
+   - Stored in `decision_history`.
+   - Represents the whole run, not one agent.
+
+3. **Agent-level history**
+   - Per-agent inputs, outputs, retrieved context, rationale, and artifacts for a
+     run.
+   - Must be stored with an explicit `agent_id`.
+   - Needed so we can ask: "what history belongs to the Bid Recommender Agent?"
+     or "what prior Vendor Proposal Agent findings exist for this vendor?"
+   - Should use dedicated agent-level tables so each agent can define chunk types
+     that match its own reasoning task.
+
+Current implementation gap:
+
+- `agent_memory_chunks` has `agent_id`, but currently only the Contract Agent is
+  indexed at startup.
+- `decision_history` and `decision_history_chunks` store run-level history.
+  They are useful for audit and replay, but they are too blunt for efficient
+  per-agent retrieval.
+- Therefore, recommender history can be inferred from the stored
+  `decision_result` artifact, but it is not yet first-class agent-level history.
+  The next schema step should add dedicated `agent_history` and
+  `agent_history_chunks` tables.
+
+High-level schema reference:
+
+```sql
+-- Stable OKF/profile memory per agent.
+CREATE TABLE agent_memory_chunks (
+  id text PRIMARY KEY,
+  agent_id text NOT NULL,
+  source_path text NOT NULL,
+  memory_type text NOT NULL,
+  tags jsonb NOT NULL DEFAULT '[]'::jsonb,
+  content text NOT NULL,
+  embedding vector(32) NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Whole bid/run decision history.
+CREATE TABLE decision_history (
+  id text PRIMARY KEY,
+  run_id text NOT NULL UNIQUE,
+  bid_id text NOT NULL DEFAULT '',
+  procurement_title text NOT NULL DEFAULT '',
+  winning_quote_id text NOT NULL DEFAULT '',
+  winning_vendor text NOT NULL DEFAULT '',
+  risk_score numeric,
+  risk_level text NOT NULL DEFAULT '',
+  recommendation text NOT NULL DEFAULT '',
+  findings jsonb NOT NULL DEFAULT '[]'::jsonb,
+  snapshot jsonb NOT NULL,
+  embedding_method text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Current run-level vector chunks.
+CREATE TABLE decision_history_chunks (
+  id text PRIMARY KEY,
+  decision_id text NOT NULL REFERENCES decision_history(id) ON DELETE CASCADE,
+  run_id text NOT NULL,
+  bid_id text NOT NULL DEFAULT '',
+  chunk_type text NOT NULL,
+  content text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  embedding vector(32) NOT NULL,
+  embedding_method text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+Agent-level history should use dedicated tables. This is better than adding only
+`agent_id` to `decision_history_chunks` because each agent needs different
+chunking:
+
+- Vendor Proposal Agent chunks vendor facts, omissions, differentiators, and
+  source evidence.
+- Contract Agent chunks risk findings, clause conflicts, terms, and mitigations.
+- Internet / Market Research Agent chunks benchmark facts, source quality, and
+  limitations.
+- Bid Recommender Agent chunks ranking rationale, tradeoffs, cutoff exceptions,
+  shortlist logic, and negotiation points.
+- UI Guidance Agent chunks accepted RFQ criteria, negotiation patterns, and
+  drafted messages when those outputs are persisted.
+
+Postgres and pgvector make filtered vector retrieval efficient after chunks
+exist, but they do not automatically create high-quality chunks. Chunking is an
+application responsibility. The backend should produce agent-specific chunks
+from structured artifacts, then store those chunks with strong metadata.
+
+```sql
+CREATE TABLE agent_history (
+  id text PRIMARY KEY,
+  run_id text NOT NULL,
+  bid_id text NOT NULL DEFAULT '',
+  quote_id text NOT NULL DEFAULT '',
+  agent_id text NOT NULL,
+  artifact_id text NOT NULL DEFAULT '',
+  history_type text NOT NULL,
+  input_summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+  output_summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+  retrieved_context jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE agent_history_chunks (
+  id text PRIMARY KEY,
+  agent_history_id text NOT NULL REFERENCES agent_history(id) ON DELETE CASCADE,
+  run_id text NOT NULL,
+  bid_id text NOT NULL DEFAULT '',
+  quote_id text NOT NULL DEFAULT '',
+  agent_id text NOT NULL,
+  artifact_id text NOT NULL DEFAULT '',
+  chunk_type text NOT NULL,
+  content text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  embedding vector(32) NOT NULL,
+  embedding_method text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+Retrieval should filter metadata first and then use vector similarity:
+
+```sql
+SELECT *
+FROM agent_history_chunks
+WHERE agent_id = 'bid_recommender_agent'
+  AND metadata->>'equipment_type' = 'MRI Machine'
+ORDER BY embedding <-> :query_embedding
+LIMIT 5;
+```
+
+This avoids searching unrelated agent memories and lets each agent retrieve the
+history most relevant to its own task.
+
+Recommended near-term implementation:
+
+- Keep `decision_history` and `decision_history_chunks` as run-level audit and
+  replay history.
+- Add `agent_history` and `agent_history_chunks`.
+- Store agent-level rows and chunks for the main agents that produce durable
+  decisions or reusable intelligence:
+  - `vendor_proposal_agent`
+  - `contract_agent`
+  - `internet_market_research_agent`
+  - `bid_recommender_agent`
+  - `ui_guidance_agent` when UI outputs are persisted
+  - `invoice_monitoring_contract_compliance_agent` when implemented
+- Retrieval must filter by `agent_id` when an agent asks for its own history.
+- Cross-agent retrieval should be explicit, for example the Bid Recommender may
+  request `contract_agent` and `vendor_proposal_agent` history as input signals,
+  but that should be visible in the retrieval metadata.
+
+### 6.6 Bid Recommendation Agent Memory
 
 The Bid Recommendation Agent needs a different memory design from the Contract
 Review Agent. The Contract Review Agent uses memory to spot contract-risk
@@ -1377,7 +1544,7 @@ guidance. In the current implementation, it is loaded only into the optional LLM
 explanation path. The deterministic ranking still uses explicit code and should
 remain stable across runs.
 
-### 6.6 Learning Loop
+### 6.7 Learning Loop
 
 Short-term decisions and decision history can produce learning, but the system should not automatically rewrite long-term memory after every case.
 
@@ -1403,7 +1570,7 @@ For medical equipment contracts, explicitly review installation readiness, calib
 
 This lesson can then be added to `sectors/medical_equipment.md` or `curated_lessons.md`.
 
-### 6.7 Implementation Decision
+### 6.8 Implementation Decision
 
 For the next implementation, the architecture should use:
 
