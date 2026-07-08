@@ -27,6 +27,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.agents.ui_guidance_agent import analyze_pdf_path  # noqa: E402
+from app.services.decision_history_pgvector import store_ui_guidance_agent_history  # noqa: E402
 
 
 DEFAULT_PDF = (
@@ -45,6 +46,13 @@ def main() -> int:
         default=str(DEFAULT_PDF),
         help="Path to vendor quote PDF.",
     )
+    parser.add_argument("--bid-id", default="")
+    parser.add_argument("--quote-id", default="")
+    parser.add_argument(
+        "--no-store",
+        action="store_true",
+        help="Print output only; do not write ui_guidance_agent history to pgvector.",
+    )
     args = parser.parse_args()
 
     pdf_path = Path(args.pdf)
@@ -55,6 +63,17 @@ def main() -> int:
 
     result = analyze_pdf_path(pdf_path)
     print(json.dumps(result, indent=2))
+    if not args.no_store:
+        try:
+            stored_run_id = store_ui_guidance_agent_history(
+                result=result,
+                bid_id=args.bid_id,
+                quote_id=args.quote_id or pdf_path.stem,
+                source_name=pdf_path.name,
+            )
+            print(f"Stored ui_guidance_agent history: {stored_run_id}")
+        except Exception as exc:
+            print(f"Skipped ui_guidance_agent history store: {exc}")
     return 0
 
 

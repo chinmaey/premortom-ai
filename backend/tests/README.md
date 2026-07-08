@@ -94,9 +94,10 @@ docker compose up -d db backend
 docker compose exec backend python tests/test_ui_guidance_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
 ```
 
-This helper prints the UI Guidance Agent output only. It does not create a
-`RUN-XXX` directory because it does not call the bid orchestrator or artifact
-store.
+This helper prints the UI Guidance Agent output and stores `ui_guidance_agent`
+rows in `agent_history` / `agent_history_chunks`. It does not create a `RUN-XXX`
+directory because it does not call the bid orchestrator or artifact store. Use
+`--no-store` to print output only.
 
 Run the capped bid-evaluation unittest inside Docker:
 

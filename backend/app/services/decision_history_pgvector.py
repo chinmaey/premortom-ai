@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +27,110 @@ DEFAULT_CATEGORY_LIMIT = 5
 DEFAULT_SIMILAR_LIMIT = 5
 DEFAULT_ITEM_CHAR_LIMIT = 500
 DEFAULT_TOTAL_CHAR_LIMIT = 6000
+
+
+def store_ui_guidance_agent_history(
+    *,
+    result: dict[str, Any],
+    bid_id: str = "",
+    quote_id: str = "",
+    run_id: str | None = None,
+    source_name: str = "",
+) -> str:
+    """Store direct UI Guidance Agent helper output as agent-level history.
+
+    This does not create a bid-run artifact directory. It writes only
+    `agent_history` and `agent_history_chunks` rows scoped to `ui_guidance_agent`.
+    """
+    stored_run_id = run_id or f"UI-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+    stored_quote_id = quote_id or str(result.get("source_name") or source_name or "")
+    history = _ui_guidance_history(
+        run_id=stored_run_id,
+        bid_id=bid_id,
+        quote_id=stored_quote_id,
+        result=result,
+        source_name=source_name,
+    )
+
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            _ensure_schema(cur)
+            cur.execute(
+                """
+                INSERT INTO agent_history (
+                  id,
+                  run_id,
+                  bid_id,
+                  quote_id,
+                  agent_id,
+                  artifact_id,
+                  history_type,
+                  input_summary,
+                  output_summary,
+                  retrieved_context
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (id) DO UPDATE SET
+                  input_summary = EXCLUDED.input_summary,
+                  output_summary = EXCLUDED.output_summary,
+                  retrieved_context = EXCLUDED.retrieved_context,
+                  created_at = now()
+                """,
+                (
+                    history["id"],
+                    history["run_id"],
+                    history["bid_id"],
+                    history["quote_id"],
+                    history["agent_id"],
+                    history["artifact_id"],
+                    history["history_type"],
+                    Json(history["input_summary"]),
+                    Json(history["output_summary"]),
+                    Json(history["retrieved_context"]),
+                ),
+            )
+            for chunk in history["chunks"]:
+                cur.execute(
+                    """
+                    INSERT INTO agent_history_chunks (
+                      id,
+                      agent_history_id,
+                      run_id,
+                      bid_id,
+                      quote_id,
+                      agent_id,
+                      artifact_id,
+                      chunk_type,
+                      content,
+                      metadata,
+                      embedding,
+                      embedding_method
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::vector, %s)
+                    ON CONFLICT (id) DO UPDATE SET
+                      content = EXCLUDED.content,
+                      metadata = EXCLUDED.metadata,
+                      embedding = EXCLUDED.embedding,
+                      embedding_method = EXCLUDED.embedding_method,
+                      created_at = now()
+                    """,
+                    (
+                        chunk["id"],
+                        history["id"],
+                        history["run_id"],
+                        history["bid_id"],
+                        history["quote_id"],
+                        history["agent_id"],
+                        history["artifact_id"],
+                        chunk["chunk_type"],
+                        chunk["content"],
+                        Json(chunk["metadata"]),
+                        _vector_literal(embed_text(chunk["content"])),
+                        EMBEDDING_METHOD,
+                    ),
+                )
+        conn.commit()
+    return stored_run_id
 
 
 def store_bid_run_history(
@@ -1110,6 +1216,92 @@ def _bid_recommender_history(
         input_summary={
             "ranked_quote_count": len(result.get("ranked_quotes") or []),
             "artifact_refs": result.get("artifact_refs") or [],
+        },
+        output_summary=output_summary,
+        chunks=chunks,
+    )
+
+
+def _ui_guidance_history(
+    *,
+    run_id: str,
+    bid_id: str,
+    quote_id: str,
+    result: dict[str, Any],
+    source_name: str,
+) -> dict[str, Any]:
+    rfq = _safe_dict(result.get("rfq_intake"))
+    negotiation = _safe_dict(result.get("negotiation_guidance"))
+    context = _safe_dict(result.get("vendor_proposal_context"))
+    output_summary = {
+        "source_name": result.get("source_name") or source_name,
+        "mode": result.get("mode", ""),
+        "requirement_summary": rfq.get("requirement_summary", ""),
+        "negotiation_question_count": len(negotiation.get("negotiation_questions") or []),
+        "missing_input_count": len(rfq.get("missing_inputs") or []),
+        "vendor_name": context.get("vendor_name", ""),
+    }
+    chunks = _agent_chunks(
+        run_id=run_id,
+        bid_id=bid_id,
+        quote_id=quote_id,
+        agent_id="ui_guidance_agent",
+        artifact_id="artifact_ui_guidance",
+        chunk_specs=[
+            (
+                "ui_rfq_requirements",
+                _join_parts(
+                    "UI guidance RFQ requirements.",
+                    rfq.get("requirement_summary", ""),
+                    _stringify_list(rfq.get("suggested_requirements")),
+                    _stringify_list(rfq.get("minimum_criteria")),
+                ),
+            ),
+            (
+                "ui_missing_inputs",
+                "UI guidance missing inputs: " + _stringify_list(rfq.get("missing_inputs")),
+            ),
+            (
+                "ui_negotiation_questions",
+                "UI guidance negotiation questions: "
+                + _stringify_list(negotiation.get("negotiation_questions")),
+            ),
+            (
+                "ui_contract_conditions",
+                "UI guidance contract conditions and lifecycle items: "
+                + _stringify_list(negotiation.get("contract_conditions"))
+                + " "
+                + _stringify_list(negotiation.get("cost_or_lifecycle_items")),
+            ),
+            (
+                "ui_vendor_message_draft",
+                "UI guidance vendor message draft: "
+                + str(negotiation.get("vendor_message_draft") or ""),
+            ),
+            (
+                "ui_negotiation_signals",
+                "UI guidance risk or negotiation signals: "
+                + _stringify_list(result.get("risk_or_negotiation_signals")),
+            ),
+        ],
+        metadata={
+            "source_name": output_summary["source_name"],
+            "mode": output_summary["mode"],
+            "vendor_name": output_summary["vendor_name"],
+            "source": "test_ui_guidance_agent.py",
+        },
+    )
+    return _agent_history(
+        run_id=run_id,
+        bid_id=bid_id,
+        quote_id=quote_id,
+        agent_id="ui_guidance_agent",
+        artifact_id="artifact_ui_guidance",
+        history_type="rfq_and_negotiation_guidance",
+        input_summary={
+            "source_name": output_summary["source_name"],
+            "mode": output_summary["mode"],
+            "vendor_proposal_context": context,
         },
         output_summary=output_summary,
         chunks=chunks,
