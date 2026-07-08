@@ -99,6 +99,19 @@ rows in `agent_history` / `agent_history_chunks`. It does not create a `RUN-XXX`
 directory because it does not call the bid orchestrator or artifact store. Use
 `--no-store` to print output only.
 
+Run the UI Guidance Agent through the backend API using a completed Vendor
+Proposal Agent artifact:
+
+```bash
+python backend/tests/test_ui_guidance_api.py --run-id RUN-024 --api http://127.0.0.1:8000
+```
+
+Docker:
+
+```bash
+docker compose exec backend python tests/test_ui_guidance_api.py --artifact /files/output/bid_runs/RUN-024/vendor_proposal_agent_quote_intelligence.json --api http://127.0.0.1:8000
+```
+
 Run the capped bid-evaluation unittest inside Docker:
 
 ```bash

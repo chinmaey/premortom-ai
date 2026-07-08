@@ -111,6 +111,13 @@ This helper prints the agent output and stores `ui_guidance_agent` rows in
 directory because it does not call the bid orchestrator or artifact store. Use
 `--no-store` to print output only.
 
+Run the RFQ Intake and Negotiation UI Guidance API test using a completed
+Vendor Proposal Agent artifact:
+
+```bash
+docker compose exec backend python tests/test_ui_guidance_api.py --artifact /files/output/bid_runs/RUN-024/vendor_proposal_agent_quote_intelligence.json --api http://127.0.0.1:8000
+```
+
 Run the full bid-evaluation unittest inside Docker:
 
 ```bash
@@ -249,6 +256,7 @@ technicians hired, warranty revised to commissioning date.
 | GET  | `/sample` | AIIMS MRI demo input |
 | POST | `/analyze` | Run full PreMortem, returns report JSON |
 | POST | `/upload` | Parse uploaded PDF/DOCX/TXT |
+| POST | `/ui-guidance/rfq-negotiation` | Generate RFQ intake / negotiation guidance from role, static inputs, feature weights, free text, and optional vendor proposal intelligence |
 | POST | `/report/{pdf\|docx\|json}` | Export the report |
 
 ---
