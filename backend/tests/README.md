@@ -78,11 +78,34 @@ docker compose up -d db backend
 docker compose exec backend python tests/test_vendor_proposal_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
 ```
 
+## RFQ Intake and Negotiation UI Guidance Agent
+
+Run the UI Guidance Agent directly on the sample quote PDF:
+
+```bash
+python backend/tests/test_ui_guidance_agent.py --pdf files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+Run the same helper inside Docker:
+
+```bash
+docker compose build backend
+docker compose up -d db backend
+docker compose exec backend python tests/test_ui_guidance_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+This helper prints the UI Guidance Agent output only. It does not create a
+`RUN-XXX` directory because it does not call the bid orchestrator or artifact
+store.
+
 Run the capped bid-evaluation unittest inside Docker:
 
 ```bash
 docker compose exec backend env RUN_BID_EVAL_TESTS=1 BID_ID=BID-001 MAX_QUOTES_PER_BID=1 python -m unittest tests.test_bid_evaluation
 ```
+
+The capped bid-evaluation unittest creates a new `files/output/bid_runs/RUN-XXX`
+directory and writes run artifacts.
 
 ## API Flow
 
