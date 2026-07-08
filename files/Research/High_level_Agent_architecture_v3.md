@@ -90,9 +90,7 @@ The weekend implementation will focus on a subset of these components while pres
 ```text
 Business Request
       ↓
-UI Guidance Agent / Intake Assistant
-      ↓
-Customer / Requirement Intake Agent
+RFQ Intake and Negotiation UI Guidance Agent
       ↓
 Orchestrator / Manager Agent
       ↓
@@ -149,24 +147,39 @@ The input layer should eventually support:
 
 ---
 
-### 5.2 UI Guidance Agent
+### 5.2 RFQ Intake and Negotiation UI Guidance Agent
 
-The UI Guidance Agent is an optional agent-assisted UI layer. It should help the user move through the workflow, but it should not own core storage, orchestration, or final decision logic.
+The RFQ Intake and Negotiation UI Guidance Agent is the agent-assisted frontend
+workflow for two related purposes:
 
-This agent is different from the Streamlit UI itself. The UI remains a deterministic application surface, while the UI Guidance Agent helps users understand what to do next.
+1. Create and refine RFQ requirements before vendor quotes are submitted.
+2. Support final contract negotiation with vendors after quote evaluation.
+
+It should be delivered as a new frontend page, similar in structure to the
+current `Screen 1 - Procurement Input`, but focused on management expectations,
+RFQ creation, and negotiation preparation rather than only vendor proposal
+values.
+
+The current procurement input screen should remain unchanged for now. This
+agent-assisted workflow should be added as a separate RFQ and negotiation page in
+the frontend when implemented.
 
 Responsibilities:
 
-- Explain the current screen and next action.
+- Capture and clarify the customer or hospital requirement.
 - Help the user create a bid or request-for-quote.
-- Suggest missing bid details or quote-upload requirements.
+- Convert role-based expectations into structured workflow data.
+- Identify missing input fields and ask clarifying questions.
+- Select or recommend the appropriate workflow template.
+- Suggest missing RFQ details or quote-upload requirements.
 - Recommend decision criteria templates.
-- Summarize agent status and run progress in plain business language.
-- Explain bid results and why a quote won or lost.
+- Summarize agent status and run progress in plain business language after the
+  RFQ moves into evaluation.
+- Explain bid results and why a quote won or lost after vendor responses are
+  reviewed.
 - Help the user drill down from bid-level results into quote-level analysis.
-- Ask clarifying questions when the input is incomplete.
 
-The UI Guidance Agent should not:
+The RFQ Intake and Negotiation UI Guidance Agent should not:
 
 - Save files directly.
 - Modify `bids_database.csv` or output artifacts directly.
@@ -174,27 +187,240 @@ The UI Guidance Agent should not:
 - Make final procurement decisions independently.
 - Dynamically generate arbitrary UI code.
 
-For the first implementation, this can remain a future component. The practical UI should still use deterministic screens for bid intake, quote uploads, run monitoring, results, and quote detail.
+The agent should guide, recommend, and draft. The frontend and backend APIs
+should own the actual state changes, saved RFQ data, and accepted criteria.
+
+The RFQ Intake and Negotiation UI Guidance Agent has two components:
+
+#### Static Role-Based Intake Component
+
+The static component is similar to the current first frontend screen, but it is
+intended for management, doctors, technicians, biomedical engineering teams, and
+procurement users before vendor proposals are submitted.
+
+Instead of capturing vendor proposal values, it captures the organization's
+expectations and constraints.
+
+The static intake should allow the user to:
+
+- Select role, such as management, doctor, technician, biomedical engineer, or
+  procurement officer.
+- Choose expectation profile, such as premium clinical capability, balanced
+  cost and service, lowest total lifecycle cost, fastest deployment, or strict
+  compliance.
+- Enter budget and allowed tolerance, such as budget plus or minus a percentage.
+- Enter mandatory minimum criteria and negotiable criteria.
+- Enter desired values for technical, operational, service, training, warranty,
+  delivery, installation, and lifecycle-cost expectations.
+- Mark which features are hard cutoffs, negotiable gaps, or scoring preferences.
+- Capture local context such as hospital size, expected patient volume,
+  clinical department needs, existing infrastructure, and staffing readiness.
+
+This static component produces structured management criteria that downstream
+agents can use:
+
+```text
+management expectation profile
+  -> minimum criteria
+  -> weighted preferences
+  -> budget and tolerance
+  -> negotiable feature ranges
+	  -> RFQ draft inputs
+	```
+
+#### Backend and Frontend API Requirement
+
+The first API/UI implementation should expose this agent through a dedicated
+backend endpoint and a new Streamlit page. The current `Screen 1 - Procurement
+Input` should remain unchanged.
+
+Backend endpoint:
+
+```text
+POST /ui-guidance/rfq-negotiation
+```
+
+Request shape:
+
+```json
+{
+  "mode": "rfq_intake|negotiation",
+  "role": "management|doctor|technician|biomedical_engineer|procurement_officer",
+  "free_text": "Open-ended requirement, concern, or negotiation question.",
+  "static_inputs": {
+    "procurement_name": "MRI Machine Procurement",
+    "equipment_type": "MRI Machine",
+    "budget_cr": 18.0,
+    "budget_tolerance_pct": 10.0,
+    "delivery_timeline_months": 6.0,
+    "warranty_start": "On Commissioning",
+    "installation_responsibility": "Vendor",
+    "training_required": true,
+    "service_response_hours": 12,
+    "site_readiness_pct": 80,
+    "patient_volume": "",
+    "clinical_use_cases": []
+  },
+  "feature_weights": {
+    "technical_capability": 25,
+    "price": 20,
+    "delivery": 10,
+    "warranty": 15,
+    "service_sla": 15,
+    "training": 10,
+    "lifecycle_cost": 5
+  },
+  "minimum_criteria": [],
+  "negotiable_criteria": [],
+  "bid_id": "",
+  "quote_id": "",
+  "vendor_proposal": {},
+  "store_history": true
+}
+```
+
+Response shape:
+
+```json
+{
+  "agent": "RFQ Intake and Negotiation UI Guidance Agent",
+  "status": "completed",
+  "mode": "rfq_intake|negotiation",
+  "rfq_intake": {
+    "requirement_summary": "",
+    "suggested_requirements": [],
+    "minimum_criteria": [],
+    "negotiable_criteria": [],
+    "missing_inputs": []
+  },
+  "negotiation_guidance": {
+    "negotiation_questions": [],
+    "contract_conditions": [],
+    "cost_or_lifecycle_items": [],
+    "vendor_message_draft": ""
+  },
+  "feature_weight_feedback": [],
+  "evidence": [],
+  "guardrails": [],
+  "history": {
+    "stored": true,
+    "run_id": "UI-..."
+  }
+}
+```
+
+Frontend page requirement:
+
+- Add a new page or tab named `RFQ / Negotiation Guidance`.
+- Reuse the familiar layout patterns from `Screen 1 - Procurement Input`, but
+  capture expectation values rather than vendor proposal values.
+- Include role selection.
+- Include free-text input for requirements, concerns, or negotiation questions.
+- Include numeric feature weights that sum to 100 where practical.
+- Include hard minimum criteria and negotiable criteria inputs.
+- Allow optional `bid_id` and `quote_id` selection later so negotiation mode can
+  load Vendor Proposal Agent intelligence.
+- Display returned RFQ recommendations, missing inputs, negotiation questions,
+  contract conditions, lifecycle-cost items, draft vendor message, evidence, and
+  guardrails.
+- Persist UI Guidance Agent output to `agent_history` / `agent_history_chunks`
+  when `store_history=true`, even though this helper does not create a
+  `RUN-XXX` bid-run directory.
+
+#### Chat Guidance Component
+
+The chat component supports guided refinement around two workflows.
+
+1. **Initial RFQ generation**
+
+   The chat component should take the static intake values, pass them to the Bid
+   Recommendation Agent and future Internet / Market Research Agent, and ask for
+   recommended changes before the RFQ is issued.
+
+   The goal is to set realistic expectations while staying within the budget
+   tolerance and preserving the strongest features possible for the selected
+   technology segment and competitive brands.
+
+   It should help answer questions such as:
+
+   - Are the requested features realistic for this budget?
+   - Which features should be mandatory versus negotiable?
+   - Which feature levels are likely to increase cost sharply?
+   - Which service, warranty, training, or lifecycle expectations should be
+     explicitly included in the RFQ?
+   - Are there competing hospitals or facilities in the region with comparable
+     MRI capabilities that should inform the requirement?
+
+   The output should be an RFQ recommendation package, not a final procurement
+   decision:
+
+   ```text
+   static intake
+     + market/specification research
+     + recommender suggestions
+     -> RFQ criteria recommendations
+     -> draft RFQ language
+     -> assumptions and tradeoffs
+   ```
+
+2. **Vendor negotiation questions**
+
+   After vendor quotes are reviewed, the chat component should help management
+   compare top recommendations and prepare negotiation questions.
+
+   It should present the top N recommendations in a visual comparison format.
+   A web chart, ranked comparison table, risk-versus-value chart, or feature
+   tradeoff matrix may be appropriate depending on the UI. The important point
+   is that users should be able to compare vendors by feature, risk, cost,
+   service terms, and negotiation gaps.
+
+   The chat should allow the user to adjust feature values and see estimated
+   cost/risk implications. For example:
+
+   ```text
+   Increase warranty from delivery to commissioning
+   Add operator and technician training
+   Add 24-hour resolution SLA
+   Add spare-parts commitment
+   Reduce advance payment
+   Shift installation responsibility to vendor
+   ```
+
+   The UI should show a reasonable cost range or cost-impact estimate where
+   market research supports it. If reliable cost evidence is unavailable, the UI
+   should say so and treat the change as a negotiation item rather than a priced
+   estimate.
+
+   Once management accepts the changes, the system should draft a message to the
+   vendor. For the current stage, it should only draft the message; sending the
+   message can be a later workflow.
+
+   Example output:
+
+   ```text
+   selected vendor or shortlist
+     + adjusted feature values
+     + cost/risk impact estimate
+     + negotiation gaps
+     -> draft vendor clarification / negotiation message
+   ```
+
+The RFQ Intake and Negotiation UI Guidance Agent should remain bounded by these rules:
+
+- It can suggest RFQ criteria and negotiation questions.
+- It can ask the recommender or market research services for structured advice.
+- It can draft messages for review.
+- It should not send vendor messages automatically.
+- It should not change accepted criteria without user confirmation.
+- It should not replace the deterministic Bid Recommendation Agent ranking.
+
+The previous Customer / Requirement Intake Agent concept is included here. It is
+not a separate agent in the current plan; it is the intake capability of the RFQ
+and negotiation page.
 
 ---
 
-### 5.3 Customer / Requirement Intake Agent
-
-This agent captures and clarifies the business requirement.
-
-Responsibilities:
-
-- Understand the business decision being reviewed
-- Identify missing input fields
-- Convert unstructured input into structured workflow data
-- Ask clarifying questions where required
-- Select the appropriate workflow template
-
-For the weekend demo, this can remain simple or partially mocked.
-
----
-
-### 5.4 Orchestrator / Manager Agent
+### 5.3 Orchestrator / Manager Agent
 
 The orchestrator is the central controller of the workflow.
 
@@ -216,7 +442,7 @@ For the next implementation step, the orchestrator can be a lightweight controll
 
 ---
 
-### 5.5 Parallel Execution Layer
+### 5.4 Parallel Execution Layer
 
 This is not a business agent. It is a system layer used by the orchestrator.
 
@@ -233,7 +459,7 @@ This layer helps justify the use of Agentic AI because the system is not just a 
 
 ---
 
-### 5.6 Specialist Agents
+### 5.5 Specialist Agents
 
 Specialist agents should be generic enough to support multiple business workflows, while still allowing domain-specific adapters.
 
@@ -344,8 +570,25 @@ The proposal artifact should therefore track extraction metadata such as:
 Current implementation status:
 
 - Deterministic PDF text extraction exists.
-- Vendor / Proposal Understanding Agent is designed but not implemented yet.
-- Until the Vendor Agent is implemented, the Contract Review Agent reads `raw_document_text` directly.
+- Vendor / Proposal Understanding Agent now has minimum backend functionality.
+- It reads the quote PDF text, extracts fixed comparable fields, and writes
+  proposal intelligence into `vendor_proposal_agent_quote_intelligence.json`.
+- Current fixed fields include vendor identity, legal entity, contact details,
+  procurement/equipment type, quoted price, advance payment, delivery timeline,
+  warranty start, installation responsibility, training flag, service response,
+  local service team, compliance claims, references, and years in operation when
+  visible in the quote text.
+- Current proposal intelligence includes vendor profile, commercial terms,
+  delivery/installation terms, warranty/service terms, training/handover,
+  differentiators, omissions or ambiguities, unusual terms, proposal quality,
+  follow-up questions, and evidence snippets.
+- The Contract Review Agent still reads `raw_document_text` directly for now,
+  but future iterations should pass the Vendor Proposal Agent's structured
+  output as additional context.
+- TODO: When the RFQ Intake and Negotiation UI Guidance Agent implements the
+  negotiation workflow, it should ask this Vendor Proposal Agent targeted
+  questions about vendor-specific evidence, omissions, contradictions,
+  lifecycle-cost gaps, and draft negotiation points.
 
 External/vendor-risk responsibilities:
 
@@ -468,7 +711,68 @@ Checks:
 
 This may be important for government, restricted-domain, or enterprise procurement use cases.
 
-##### 7. Bid Recommendation Agent
+##### 7. Invoice Monitoring and Contract Compliance Agent
+
+The Invoice Monitoring and Contract Compliance Agent is a post-award agent. It
+monitors whether vendor invoices, recurring charges, consumables, spare parts,
+service events, warranty coverage, and maintenance activities remain compliant
+with the awarded contract.
+
+This agent also owns invoice-level fraud and anomaly detection for the current
+design. Fraud detection should be framed as risk and anomaly review, not as a
+legal conclusion.
+
+Primary responsibilities:
+
+- Generate or validate the expected invoice trail for the main MRI machine
+  purchase.
+- Simulate daily, monthly, quarterly, annual, or milestone-based transaction
+  trails for associated services and parts.
+- Track consumables, spare parts, coils, service kits, warranty extensions,
+  software subscriptions, calibration, preventive maintenance, corrective
+  maintenance, training refreshers, uptime commitments, and SLA obligations.
+- Compare actual or simulated invoices against contract terms, purchase order
+  milestones, acceptance criteria, warranty coverage, and service commitments.
+- Identify charges that should be included under warranty, AMC, CMC, SLA, or the
+  original quote but appear again as separate invoices.
+- Detect duplicate invoices, unexplained price drift, abnormal invoice timing,
+  missing service evidence, suspicious bundling, and recurring charges that were
+  not visible during quote comparison.
+- Maintain a lifecycle-cost view after award, not only the initial purchase
+  amount.
+- Produce evidence for compliance review, vendor performance scoring, future
+  procurement memory, and negotiation preparation.
+
+Expected inputs:
+
+- Awarded quote and final contract terms.
+- Payment milestones and acceptance criteria.
+- Warranty, service, SLA, training, consumables, and spare-parts commitments.
+- Vendor invoices and transaction logs.
+- Market research on consumables and lifecycle costs.
+- Historical decision and invoice records when available.
+
+Expected outputs:
+
+- Expected invoice and transaction schedule.
+- Invoice compliance findings.
+- Lifecycle-cost forecast and actual-vs-expected variance.
+- Missing-cost and unclear-responsibility warnings.
+- Fraud/anomaly risk indicators with evidence.
+- Supply continuity risks.
+- Follow-up questions for vendor negotiation, compliance review, or contract
+  enforcement.
+
+Guardrails:
+
+- Treat simulated invoices as planning artifacts, not accounting records.
+- Separate contracted costs, actual invoice costs, and estimated future costs.
+- Use careful language such as "potential anomaly", "requires review", or
+  "possible non-compliance".
+- Do not approve payments, reject payments, accuse a vendor of fraud, or modify
+  financial records automatically.
+
+##### 8. Bid Recommendation Agent
 
 The Bid Recommendation Agent is the decision integrator for a bidding process. It compares multiple vendor quotes within one bid and recommends the best quote or shortlist.
 
@@ -486,6 +790,8 @@ Future inputs:
 
 - Cost / Benchmark Agent outputs.
 - Compliance / Policy Agent outputs.
+- Invoice Monitoring and Contract Compliance Agent outputs when post-award
+  history exists.
 - Vendor / External Risk Agent outputs.
 - Internet / Market Research Agent outputs.
 - MCP-based external research outputs for current market/specification checks.
@@ -637,7 +943,7 @@ service returns the same structured benchmark schema.
 
 ---
 
-### 5.7 Evaluator Agent
+### 5.6 Evaluator Agent
 
 The evaluator reviews the overall quality of the workflow.
 
@@ -656,7 +962,7 @@ This is important because the system should not only generate content; it should
 
 ---
 
-### 5.8 Decision Summary Agent
+### 5.7 Decision Summary Agent
 
 The Decision Summary Agent converts the evaluator-approved outputs into a business-friendly decision package.
 
@@ -675,7 +981,7 @@ Final output should include:
 
 ---
 
-### 5.9 UI Dashboard
+### 5.8 UI Dashboard
 
 The UI should show the agentic workflow, not just the final answer.
 
@@ -903,8 +1209,8 @@ retrieval interface.
 
 Implementation details for the current version:
 
-- Indexed data: OKF agent memory only. Bid/run history is not written to
-  pgvector yet.
+- Indexed data: OKF agent memory in `agent_memory_chunks`, plus run-level
+  decision history in `decision_history` and `decision_history_chunks`.
 - Chunking strategy: one OKF Markdown file becomes one vector chunk.
 - Embedding method: `local_hashing_vector_v1`, a deterministic 32-dimensional
   local feature vector.
@@ -1085,7 +1391,174 @@ vector-similar risk-pattern chunks.
 
 This design preserves auditability and avoids noisy historical decisions polluting current reasoning.
 
-### 6.5 Bid Recommendation Agent Memory
+### 6.5 pgvector Database Schema and Agent-Level History Requirement
+
+The pgvector database should support three related but separate memory/history
+types:
+
+1. **Agent OKF memory**
+   - Stable profile, policy, pattern, and reference memory.
+   - Stored in `agent_memory_chunks`.
+   - Always scoped by `agent_id`.
+
+2. **Run-level decision history**
+   - Completed bid/run outcome and audit snapshot.
+   - Stored in `decision_history`.
+   - Represents the whole run, not one agent.
+
+3. **Agent-level history**
+   - Per-agent inputs, outputs, retrieved context, rationale, and artifacts for a
+     run.
+   - Must be stored with an explicit `agent_id`.
+   - Needed so we can ask: "what history belongs to the Bid Recommender Agent?"
+     or "what prior Vendor Proposal Agent findings exist for this vendor?"
+   - Should use dedicated agent-level tables so each agent can define chunk types
+     that match its own reasoning task.
+
+Current implementation gap:
+
+- `agent_memory_chunks` has `agent_id`, but currently only the Contract Agent is
+  indexed at startup.
+- `decision_history` and `decision_history_chunks` store run-level history.
+  They are useful for audit and replay, but they are too blunt for efficient
+  per-agent retrieval.
+- Therefore, recommender history can be inferred from the stored
+  `decision_result` artifact, but it is not yet first-class agent-level history.
+  The next schema step should add dedicated `agent_history` and
+  `agent_history_chunks` tables.
+
+High-level schema reference:
+
+```sql
+-- Stable OKF/profile memory per agent.
+CREATE TABLE agent_memory_chunks (
+  id text PRIMARY KEY,
+  agent_id text NOT NULL,
+  source_path text NOT NULL,
+  memory_type text NOT NULL,
+  tags jsonb NOT NULL DEFAULT '[]'::jsonb,
+  content text NOT NULL,
+  embedding vector(32) NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Whole bid/run decision history.
+CREATE TABLE decision_history (
+  id text PRIMARY KEY,
+  run_id text NOT NULL UNIQUE,
+  bid_id text NOT NULL DEFAULT '',
+  procurement_title text NOT NULL DEFAULT '',
+  winning_quote_id text NOT NULL DEFAULT '',
+  winning_vendor text NOT NULL DEFAULT '',
+  risk_score numeric,
+  risk_level text NOT NULL DEFAULT '',
+  recommendation text NOT NULL DEFAULT '',
+  findings jsonb NOT NULL DEFAULT '[]'::jsonb,
+  snapshot jsonb NOT NULL,
+  embedding_method text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Current run-level vector chunks.
+CREATE TABLE decision_history_chunks (
+  id text PRIMARY KEY,
+  decision_id text NOT NULL REFERENCES decision_history(id) ON DELETE CASCADE,
+  run_id text NOT NULL,
+  bid_id text NOT NULL DEFAULT '',
+  chunk_type text NOT NULL,
+  content text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  embedding vector(32) NOT NULL,
+  embedding_method text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+Agent-level history should use dedicated tables. This is better than adding only
+`agent_id` to `decision_history_chunks` because each agent needs different
+chunking:
+
+- Vendor Proposal Agent chunks vendor facts, omissions, differentiators, and
+  source evidence.
+- Contract Agent chunks risk findings, clause conflicts, terms, and mitigations.
+- Internet / Market Research Agent chunks benchmark facts, source quality, and
+  limitations.
+- Bid Recommender Agent chunks ranking rationale, tradeoffs, cutoff exceptions,
+  shortlist logic, and negotiation points.
+- UI Guidance Agent chunks accepted RFQ criteria, negotiation patterns, and
+  drafted messages when those outputs are persisted.
+
+Postgres and pgvector make filtered vector retrieval efficient after chunks
+exist, but they do not automatically create high-quality chunks. Chunking is an
+application responsibility. The backend should produce agent-specific chunks
+from structured artifacts, then store those chunks with strong metadata.
+
+```sql
+CREATE TABLE agent_history (
+  id text PRIMARY KEY,
+  run_id text NOT NULL,
+  bid_id text NOT NULL DEFAULT '',
+  quote_id text NOT NULL DEFAULT '',
+  agent_id text NOT NULL,
+  artifact_id text NOT NULL DEFAULT '',
+  history_type text NOT NULL,
+  input_summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+  output_summary jsonb NOT NULL DEFAULT '{}'::jsonb,
+  retrieved_context jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE agent_history_chunks (
+  id text PRIMARY KEY,
+  agent_history_id text NOT NULL REFERENCES agent_history(id) ON DELETE CASCADE,
+  run_id text NOT NULL,
+  bid_id text NOT NULL DEFAULT '',
+  quote_id text NOT NULL DEFAULT '',
+  agent_id text NOT NULL,
+  artifact_id text NOT NULL DEFAULT '',
+  chunk_type text NOT NULL,
+  content text NOT NULL,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  embedding vector(32) NOT NULL,
+  embedding_method text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+
+Retrieval should filter metadata first and then use vector similarity:
+
+```sql
+SELECT *
+FROM agent_history_chunks
+WHERE agent_id = 'bid_recommender_agent'
+  AND metadata->>'equipment_type' = 'MRI Machine'
+ORDER BY embedding <-> :query_embedding
+LIMIT 5;
+```
+
+This avoids searching unrelated agent memories and lets each agent retrieve the
+history most relevant to its own task.
+
+Recommended near-term implementation:
+
+- Keep `decision_history` and `decision_history_chunks` as run-level audit and
+  replay history.
+- Add `agent_history` and `agent_history_chunks`.
+- Store agent-level rows and chunks for the main agents that produce durable
+  decisions or reusable intelligence:
+  - `vendor_proposal_agent`
+  - `contract_agent`
+  - `internet_market_research_agent`
+  - `bid_recommender_agent`
+  - `ui_guidance_agent` when UI outputs are persisted
+  - `invoice_monitoring_contract_compliance_agent` when implemented
+- Retrieval must filter by `agent_id` when an agent asks for its own history.
+- Cross-agent retrieval should be explicit, for example the Bid Recommender may
+  request `contract_agent` and `vendor_proposal_agent` history as input signals,
+  but that should be visible in the retrieval metadata.
+
+### 6.6 Bid Recommendation Agent Memory
 
 The Bid Recommendation Agent needs a different memory design from the Contract
 Review Agent. The Contract Review Agent uses memory to spot contract-risk
@@ -1170,7 +1643,7 @@ guidance. In the current implementation, it is loaded only into the optional LLM
 explanation path. The deterministic ranking still uses explicit code and should
 remain stable across runs.
 
-### 6.6 Learning Loop
+### 6.7 Learning Loop
 
 Short-term decisions and decision history can produce learning, but the system should not automatically rewrite long-term memory after every case.
 
@@ -1196,7 +1669,7 @@ For medical equipment contracts, explicitly review installation readiness, calib
 
 This lesson can then be added to `sectors/medical_equipment.md` or `curated_lessons.md`.
 
-### 6.7 Implementation Decision
+### 6.8 Implementation Decision
 
 For the next implementation, the architecture should use:
 
@@ -1218,6 +1691,15 @@ Load core Markdown files
 
 This gives the demo a clear memory story without requiring complex infrastructure immediately.
 
+Future TODO: decentralize agents and data stores where it improves reliability,
+ownership, scaling, or integration boundaries. For the current demo, a single
+backend orchestrator and shared pgvector-enabled Postgres are simpler and easier
+to debug. Later, agents can be split into independent services or workers, and
+database ownership can be separated by domain, such as memory, decision history,
+agent history, invoice monitoring, and external research. This should be done
+only after the artifact contracts, agent-level history schema, and retrieval
+interfaces are stable.
+
 ---
 
 ## 7. Additional Future Agents
@@ -1237,6 +1719,7 @@ The architecture can later include:
 - Agent Operation Cost Management Agent
 - Contract Review Agent
 - Continuous Monitoring Agent
+- Invoice Monitoring and Contract Compliance Agent
 
 These should not all be implemented immediately. They are useful for showing long-term extensibility.
 

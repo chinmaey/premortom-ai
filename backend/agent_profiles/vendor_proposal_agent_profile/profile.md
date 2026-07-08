@@ -184,6 +184,6 @@ logic.
 
 ## Status
 
-Designed; artifact scaffold exists. Current implementation stores raw extracted
-PDF text and a small fixed-feature shell. Proposal intelligence extraction is
-the next implementation step.
+Implemented with minimum backend functionality. Current code reads quote PDF
+text, extracts fixed comparable fields, and writes proposal intelligence to
+`vendor_proposal_agent_quote_intelligence.json`.

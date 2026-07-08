@@ -29,6 +29,7 @@ services:
       OKF_MEMORY_ROOT: /app/agent_profiles/contract_agent_profile
       BID_RECOMMENDER_AGENT_OKF_MEMORY_ROOT: /app/agent_profiles/bid_recommender_agent_profile
       INTERNET_MARKET_RESEARCH_AGENT_OKF_MEMORY_ROOT: /app/agent_profiles/internet_market_research_agent_profile
+      UI_GUIDANCE_AGENT_OKF_MEMORY_ROOT: /app/agent_profiles/ui_guidance_agent_profile
       OKF_WRITE_MEMORY_INDEX: ${OKF_WRITE_MEMORY_INDEX:-1}
       OKF_INDEX_PGVECTOR: ${OKF_INDEX_PGVECTOR:-1}
       OKF_USE_PGVECTOR_RETRIEVAL: ${OKF_USE_PGVECTOR_RETRIEVAL:-1}

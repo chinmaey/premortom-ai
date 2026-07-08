@@ -11,6 +11,8 @@ TABLES = [
     "agent_memory_chunks",
     "decision_history",
     "decision_history_chunks",
+    "agent_history",
+    "agent_history_chunks",
 ]
 
 
@@ -31,6 +33,7 @@ def get_database_status() -> dict[str, Any]:
         },
         "recent_memory_rows": [],
         "recent_decision_rows": [],
+        "agent_history_counts": [],
         "error": "",
     }
     if not database_url:
@@ -52,6 +55,8 @@ def get_database_status() -> dict[str, Any]:
                     status["recent_memory_rows"] = _recent_memory_rows(cur)
                 if status["tables"]["decision_history"]["exists"]:
                     status["recent_decision_rows"] = _recent_decision_rows(cur)
+                if status["tables"]["agent_history_chunks"]["exists"]:
+                    status["agent_history_counts"] = _agent_history_counts(cur)
     except Exception as exc:
         status["error"] = str(exc)
     return status
@@ -113,4 +118,22 @@ def _recent_decision_rows(cur) -> list[dict[str, Any]]:
             "created_at": created_at.isoformat() if created_at else "",
         }
         for run_id, procurement_title, risk_level, risk_score, created_at in cur.fetchall()
+    ]
+
+
+def _agent_history_counts(cur) -> list[dict[str, Any]]:
+    cur.execute(
+        """
+        SELECT agent_id, count(*) AS chunks
+        FROM agent_history_chunks
+        GROUP BY agent_id
+        ORDER BY agent_id
+        """
+    )
+    return [
+        {
+            "agent_id": agent_id,
+            "chunks": int(chunks),
+        }
+        for agent_id, chunks in cur.fetchall()
     ]

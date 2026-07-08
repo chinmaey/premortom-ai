@@ -90,6 +90,54 @@ Run the bid contract-review integration test against the Docker backend:
 python backend/tests/test_contract_review.py --api http://127.0.0.1:8000 --bid-id BID-001
 ```
 
+Run the Vendor Proposal Agent helper inside Docker:
+
+```bash
+docker compose build backend
+docker compose up -d db backend
+docker compose exec backend python tests/test_vendor_proposal_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+Run the RFQ Intake and Negotiation UI Guidance Agent helper inside Docker:
+
+```bash
+docker compose build backend
+docker compose up -d db backend
+docker compose exec backend python tests/test_ui_guidance_agent.py --pdf /files/input/samples/bids/BID-001/BID-001-Q01.pdf
+```
+
+This helper prints the agent output and stores `ui_guidance_agent` rows in
+`agent_history` / `agent_history_chunks`. It does not create a `RUN-XXX`
+directory because it does not call the bid orchestrator or artifact store. Use
+`--no-store` to print output only.
+
+Run the RFQ Intake and Negotiation UI Guidance API test using a completed
+Vendor Proposal Agent artifact:
+
+```bash
+docker compose exec backend python tests/test_ui_guidance_api.py --artifact /files/output/bid_runs/RUN-024/vendor_proposal_agent_quote_intelligence.json --api http://127.0.0.1:8000
+```
+
+Run the full bid-evaluation unittest inside Docker:
+
+```bash
+docker compose exec backend env RUN_BID_EVAL_TESTS=1 BID_ID=BID-001 MAX_QUOTES_PER_BID=1 python -m unittest tests.test_bid_evaluation
+```
+
+The full bid-evaluation unittest creates a new `files/output/bid_runs/RUN-XXX`
+directory and writes run artifacts.
+
+Inspect the newest vendor proposal artifact:
+
+```bash
+ls -td files/output/bid_runs/RUN-* | head -1
+cat files/output/bid_runs/RUN-XXX/vendor_proposal_agent_quote_intelligence.json
+```
+
+Replace `RUN-XXX` with the newest run id. Rebuild the backend image after code
+or test-helper changes because Docker copies `backend/app`, `backend/tests`, and
+`backend/agent_profiles` at build time.
+
 Check pgvector/Postgres tables inside Docker:
 
 ```bash
@@ -97,6 +145,8 @@ docker compose exec db psql -U premortem -d premortem -c "\dt"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM agent_memory_chunks;"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history;"
 docker compose exec db psql -U premortem -d premortem -c "SELECT count(*) FROM decision_history_chunks;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT agent_id, COUNT(*) AS rows FROM agent_history GROUP BY agent_id ORDER BY agent_id;"
+docker compose exec db psql -U premortem -d premortem -c "SELECT agent_id, COUNT(*) AS chunks FROM agent_history_chunks GROUP BY agent_id ORDER BY agent_id;"
 ```
 
 From the host machine, connect to the Docker database on port `5433`:
@@ -206,6 +256,7 @@ technicians hired, warranty revised to commissioning date.
 | GET  | `/sample` | AIIMS MRI demo input |
 | POST | `/analyze` | Run full PreMortem, returns report JSON |
 | POST | `/upload` | Parse uploaded PDF/DOCX/TXT |
+| POST | `/ui-guidance/rfq-negotiation` | Generate RFQ intake / negotiation guidance from role, static inputs, feature weights, free text, and optional vendor proposal intelligence |
 | POST | `/report/{pdf\|docx\|json}` | Export the report |
 
 ---
