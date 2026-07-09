@@ -189,19 +189,52 @@ Autonomous agentic expert team with human touch.
 ## Selected KPI Positioning
 
 1. Configurable autonomous agentic expert team with human touch.
-   The platform can run analysis with minimal human dependency, while human experts provide judgment, policy direction, approval, and customer-specific nuance where needed.
+   The platform can run analysis with minimal human dependency, while human experts provide judgment, policy direction, approval, and customer-specific nuance where needed. The key idea is that agents are modeled as skill resources with defined roles, memory, and connections. This allows HR and team-management practices to be applied to agent teams, while humans remain part of the higher-level team context.
 
 2. Cross-domain procurement risk reasoning.
-   The system connects contract terms, vendor proposal evidence, site readiness, workforce readiness, finance exposure, market context, and historical decisions.
+   The system connects contract terms, vendor proposal evidence, site readiness, workforce readiness, finance exposure, internet-based market context, and historical decisions.
 
 3. Customer-specific knowledge and policy adaptation.
-   Agent roles, OKF memory, decision history, and agent-level history can be tailored to each customer's procurement rules, risk priorities, and operating model.
+   Agent roles, OKF memory, RAG, decision history, and agent-level history can be tailored to each customer's procurement rules, risk priorities, and operating model.
 
 4. Audit-ready evidence and quality benchmarking.
-   Outputs should show evidence, reasoning, conditions, confidence, gaps, and benchmark context so reviewers can understand and defend the recommendation.
+   Outputs should show evidence, reasoning, conditions, confidence, gaps, and benchmark context so reviewers can understand and defend the recommendation. The Quality Evaluation Agent strengthens this by checking evidence quality, confidence, conflicts, and benchmark alignment.
 
 5. Lifecycle compliance and leakage monitoring.
-   The design extends beyond award decision into invoice, service, consumables, parts, contract compliance, and fraud/drift monitoring.
+   The design extends beyond the award decision into invoice, service, consumables, parts, contract compliance, and fraud/drift monitoring. This expands the proposal from pre-award decision support into lifecycle risk and leakage prevention.
+
+## Selected Technical Considerations
+
+OKF memory should be positioned as more than static prompt context. It can evolve
+into an agent capability layer where each agent receives task-specific context,
+skills, tools, MCP connectors, and A2A communication contracts.
+
+Memory should not be treated as one generic vector bucket. Each agent can have a
+different chunking schema and retrieval policy based on its role:
+
+- Contract Review Agent can chunk by clause, obligation, risk category, and
+  missing term.
+- Vendor Proposal Agent can chunk by vendor fact, missing evidence,
+  differentiator, unusual term, and follow-up question.
+- Internet / Market Research Agent can chunk by benchmark fact, source quality,
+  market signal, and confidence.
+- Bid Recommender Agent can chunk by ranking rationale, cutoff exception,
+  tradeoff, and negotiation condition.
+- UI Guidance Agent can chunk by accepted RFQ criteria, role-specific
+  expectation, and negotiation pattern.
+
+For the current implementation, the embedding model should remain centrally
+managed and shared for simplicity. Agent-specific chunking, metadata filters,
+retrieval limits, and ranking policies provide most of the benefit while keeping
+pgvector indexes easier to operate.
+
+Future versions can support agent-specific embedding models if evaluation shows
+clear benefit. That requires tracking embedding dimensions, index compatibility,
+cost, latency, and quality per agent. The safer architecture statement is:
+
+> We keep the embedding layer replaceable and centrally managed, while allowing
+> each agent to define its own memory schema, chunking strategy, and retrieval
+> policy.
 
 ## Comparison Framing
 
