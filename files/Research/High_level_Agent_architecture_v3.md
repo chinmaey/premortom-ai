@@ -1888,3 +1888,83 @@ An Agentic AI platform demonstrates additional value through:
 - Workflow governance
 
 The goal of the architecture is not merely to generate recommendations, but to simulate a structured business review process.
+
+---
+
+## 15. Research Document Sync Gaps / Tonight TODO
+
+The supporting research documents have now been partially synchronized with this
+latest high-level architecture. The remaining gaps below should be addressed
+tonight or explicitly moved to later.
+
+### Documentation Gaps
+
+1. Binary artifacts are stale.
+   `Agentic_Vendor_Cost_Intelligence_Research.pdf`, related PPTX files, and
+   `Diagram.jpg` may not reflect the latest UI Guidance, Vendor Proposal,
+   Internet / Market Research, Invoice Monitoring, and pgvector memory design.
+
+2. Some older notes still use generic labels.
+   Older docs refer to UI Agent, Research Agent, Vendor Intelligence Agent, and
+   Recommendation Agent in broad terms. The current working names should be:
+   RFQ Intake and Negotiation UI Guidance Agent, Vendor Proposal Agent,
+   Internet / Market Research Agent, Bid Recommender Agent, and Invoice
+   Monitoring and Contract Compliance Agent.
+
+3. Agent profile folders should remain exact and complete.
+   Expected profile folders are:
+   `contract_agent_profile`, `bid_recommender_agent_profile`,
+   `internet_market_research_agent_profile`, `ui_guidance_agent_profile`, and
+   `vendor_proposal_agent_profile`.
+
+4. API documentation needs to stay synchronized with implementation.
+   `Backend_Design.md` now includes `POST /ui-guidance/rfq-negotiation`, but
+   README and frontend docs should be checked after the API stabilizes.
+
+5. UI documentation still describes several future dashboard views.
+   The immediate frontend implementation should focus only on the new RFQ /
+   Negotiation Guidance page and its API integration.
+
+### Implementation Gaps
+
+1. Frontend RFQ / Negotiation Guidance page is not implemented yet.
+   It should collect role, static expectation inputs, free text, feature
+   weights, minimum criteria, and negotiable criteria, then display the API
+   output.
+
+2. UI Guidance API exists as the backend integration point, but it still needs
+   Docker verification and frontend wiring.
+
+3. Recommender use of agent-level history should become explicit.
+   The database can store per-agent history now, but recommender retrieval
+   policy should define which agent-history chunks it reads and why.
+
+4. OKF pgvector indexing should be checked for all agent profile folders.
+   Earlier checks showed only contract-agent OKF memory in
+   `agent_memory_chunks`; the newer profiles should be indexed consistently.
+
+5. Internet / Market Research output is currently advisory context.
+   The recommender should use it as current market evidence, but should continue
+   separating quote evidence from web evidence and preserving confidence/source
+   quality.
+
+6. Invoice Monitoring and Contract Compliance Agent is design-stage only.
+   It needs synthetic invoice/service trail generation, post-award input schema,
+   contract-to-invoice matching logic, periodic transaction simulation, and
+   fraud/drift detection policy before implementation.
+
+7. Agent decentralization is deferred.
+   For now, the backend orchestrator and shared pgvector database are acceptable
+   for the demo. Later, agents and data stores can be decentralized after
+   artifact contracts, history schemas, and retrieval policies are stable.
+
+### Test And Demo Gaps
+
+1. Docker test run should verify both file artifacts and pgvector rows.
+2. A run-level artifact should prove Vendor Proposal -> Contract Review ->
+   Market Research -> Bid Recommender -> UI Guidance handoff.
+3. The demo should show low-confidence internet research separately from quote
+   evidence, so the audience does not mistake sparse web evidence for a final
+   recommendation.
+4. UI output should clearly distinguish recommendation, cutoff failure,
+   negotiable exception, and missing-information follow-up.
