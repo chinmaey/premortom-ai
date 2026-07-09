@@ -203,18 +203,12 @@ def screen_input():
                     ", ".join(str(x) for x in f["historical_delays_months"]),
                 )
 
-            b1, b2, b3 = st.columns(3)
-            analyze_clicked = b1.form_submit_button(
-                "🔍 Analyze Procurement", use_container_width=True
-            )
-            premortem_clicked = b2.form_submit_button(
+            _, run_col, _ = st.columns(3)
+            run_clicked = run_col.form_submit_button(
                 "🧠 Run PreMortem", use_container_width=True, type="primary"
             )
-            report_clicked = b3.form_submit_button(
-                "📄 Generate Report", use_container_width=True
-            )
 
-        if analyze_clicked or premortem_clicked or report_clicked:
+        if run_clicked:
             try:
                 delays = [
                     float(x.strip())
