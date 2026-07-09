@@ -237,7 +237,12 @@ def screen_input():
             st.session_state.form = payload
             with st.spinner("Running multi-agent PreMortem review..."):
                 try:
-                    st.session_state.report = api.analyze(payload)
+                    demo_result = api.analyze_demo_run(payload)
+                    st.session_state.report = demo_result["report"]
+                    st.session_state.demo_sample_id = demo_result.get("sample_id", "")
+                    st.session_state.demo_bid_run_id = (
+                        demo_result.get("bid_run", {}).get("run_id", "")
+                    )
                 except Exception as e:
                     st.error(f"Analysis failed: {e}")
                     return
@@ -245,6 +250,12 @@ def screen_input():
                 "PreMortem complete. Open the Investigation Board, Debate Room "
                 "and Executive Dashboard from the sidebar."
             )
+            if st.session_state.get("demo_sample_id"):
+                st.caption(
+                    "Added current input as "
+                    f"{st.session_state.demo_sample_id}; bid run "
+                    f"{st.session_state.get('demo_bid_run_id', '')} started."
+                )
             _decision_banner(st.session_state.report)
 
 
