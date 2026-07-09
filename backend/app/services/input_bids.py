@@ -146,6 +146,18 @@ def save_procurement_input_sample(
         raise ValueError(f"Invalid bid_id: {bid_id}")
 
     rows = read_rows()
+    kept_rows = []
+    for row in rows:
+        if row.get("bid_id") == bid_id and row.get("source") == "screen_1_input":
+            stored_path = row.get("pdf_path")
+            if stored_path:
+                try:
+                    (SAMPLES_DIR / stored_path).unlink(missing_ok=True)
+                except OSError:
+                    pass
+            continue
+        kept_rows.append(row)
+    rows = kept_rows
     quote_id = _next_quote_id(rows, bid_id)
     bid_dir = BIDS_DIR / bid_id
     bid_dir.mkdir(parents=True, exist_ok=True)

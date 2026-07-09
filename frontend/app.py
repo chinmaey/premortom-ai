@@ -256,6 +256,7 @@ def screen_input():
                     f"{st.session_state.demo_sample_id}; bid run "
                     f"{st.session_state.get('demo_bid_run_id', '')} started."
                 )
+            _fallback_notice(st.session_state.report)
             _decision_banner(st.session_state.report)
 
 
@@ -298,6 +299,25 @@ def _decision_banner(rep: dict):
     )
 
 
+def _fallback_notice(rep: dict):
+    if not rep:
+        return
+    offline_agents = [
+        agent.get("agent", "Agent")
+        for agent in rep.get("agent_results", [])
+        if agent.get("status") == "offline"
+        or agent.get("metrics", {}).get("agentic_output") is False
+    ]
+    if offline_agents:
+        st.warning(
+            "Live agentic LLM analysis failed for this run, likely due to API or "
+            "internet connectivity. Showing deterministic non-agentic fallback "
+            "output for now. Affected agents: "
+            + ", ".join(offline_agents)
+            + "."
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Screen 2 - Agent Investigation Board
 # --------------------------------------------------------------------------- #
@@ -307,6 +327,7 @@ def screen_agents():
     if not rep:
         st.info("Run a PreMortem on Screen 1 first.")
         return
+    _fallback_notice(rep)
 
     if st.button("▶ Replay live execution"):
         ph = st.empty()
