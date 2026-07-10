@@ -1,0 +1,49 @@
+{"id": 1, "timestamp": "2026-07-09T16:22:23.830729+00:00", "type": "run_queued", "bid_id": "BID-001"}
+{"id": 2, "timestamp": "2026-07-09T16:22:23.834174+00:00", "type": "run_started", "bid_id": "BID-001"}
+{"id": 3, "timestamp": "2026-07-09T16:22:23.834933+00:00", "type": "agent_status", "agent": "bid_recommender", "status": "running"}
+{"id": 4, "timestamp": "2026-07-09T16:22:23.836126+00:00", "type": "quote_running", "quote_id": "BID-001-Q01"}
+{"id": 5, "timestamp": "2026-07-09T16:22:23.837120+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 6, "timestamp": "2026-07-09T16:22:23.838147+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 7, "timestamp": "2026-07-09T16:22:32.843713+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 8, "timestamp": "2026-07-09T16:22:41.271685+00:00", "type": "quote_completed", "quote_id": "BID-001-Q01", "vendor_name": "", "risk_score": 88.0}
+{"id": 9, "timestamp": "2026-07-09T16:22:41.272202+00:00", "type": "quote_running", "quote_id": "BID-001-Q02"}
+{"id": 10, "timestamp": "2026-07-09T16:22:41.272677+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 11, "timestamp": "2026-07-09T16:22:41.273153+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 12, "timestamp": "2026-07-09T16:22:59.571585+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 13, "timestamp": "2026-07-09T16:23:08.987972+00:00", "type": "quote_completed", "quote_id": "BID-001-Q02", "vendor_name": "", "risk_score": 52.0}
+{"id": 14, "timestamp": "2026-07-09T16:23:08.988563+00:00", "type": "quote_running", "quote_id": "BID-001-Q03"}
+{"id": 15, "timestamp": "2026-07-09T16:23:08.989060+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 16, "timestamp": "2026-07-09T16:23:08.989539+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 17, "timestamp": "2026-07-09T16:23:17.800525+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 18, "timestamp": "2026-07-09T16:23:27.222460+00:00", "type": "quote_completed", "quote_id": "BID-001-Q03", "vendor_name": "", "risk_score": 78.0}
+{"id": 19, "timestamp": "2026-07-09T16:23:27.224532+00:00", "type": "quote_running", "quote_id": "BID-001-Q04"}
+{"id": 20, "timestamp": "2026-07-09T16:23:27.225618+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 21, "timestamp": "2026-07-09T16:23:27.226092+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 22, "timestamp": "2026-07-09T16:23:38.076412+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 23, "timestamp": "2026-07-09T16:23:47.596962+00:00", "type": "quote_completed", "quote_id": "BID-001-Q04", "vendor_name": "", "risk_score": 78.0}
+{"id": 24, "timestamp": "2026-07-09T16:23:47.597513+00:00", "type": "quote_running", "quote_id": "BID-001-Q05"}
+{"id": 25, "timestamp": "2026-07-09T16:23:47.598040+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 26, "timestamp": "2026-07-09T16:23:47.598495+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 27, "timestamp": "2026-07-09T16:23:58.347649+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 28, "timestamp": "2026-07-09T16:24:07.873396+00:00", "type": "quote_completed", "quote_id": "BID-001-Q05", "vendor_name": "", "risk_score": 61.0}
+{"id": 29, "timestamp": "2026-07-09T16:24:07.873966+00:00", "type": "quote_running", "quote_id": "BID-001-Q06"}
+{"id": 30, "timestamp": "2026-07-09T16:24:07.874514+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 31, "timestamp": "2026-07-09T16:24:07.875003+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 32, "timestamp": "2026-07-09T16:24:16.765152+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 33, "timestamp": "2026-07-09T16:24:25.485971+00:00", "type": "quote_completed", "quote_id": "BID-001-Q06", "vendor_name": "Current Screen 1 Input", "risk_score": 92.0}
+{"id": 34, "timestamp": "2026-07-09T16:24:25.486542+00:00", "type": "quote_running", "quote_id": "BID-001-Q07"}
+{"id": 35, "timestamp": "2026-07-09T16:24:25.487080+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 36, "timestamp": "2026-07-09T16:24:25.487665+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 37, "timestamp": "2026-07-09T16:24:35.842239+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 38, "timestamp": "2026-07-09T16:24:44.454728+00:00", "type": "quote_completed", "quote_id": "BID-001-Q07", "vendor_name": "Current Screen 1 Input", "risk_score": 92.0}
+{"id": 39, "timestamp": "2026-07-09T16:24:44.455796+00:00", "type": "quote_running", "quote_id": "BID-001-Q08"}
+{"id": 40, "timestamp": "2026-07-09T16:24:44.456376+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "running"}
+{"id": 41, "timestamp": "2026-07-09T16:24:44.456944+00:00", "type": "agent_status", "agent": "contract_review", "status": "running"}
+{"id": 42, "timestamp": "2026-07-09T16:24:54.369052+00:00", "type": "agent_status", "agent": "vendor_proposal", "status": "completed"}
+{"id": 43, "timestamp": "2026-07-09T16:25:01.840167+00:00", "type": "quote_completed", "quote_id": "BID-001-Q08", "vendor_name": "Current Screen 1 Input", "risk_score": 88.0}
+{"id": 44, "timestamp": "2026-07-09T16:25:01.840745+00:00", "type": "agent_status", "agent": "bid_recommender", "status": "running"}
+{"id": 45, "timestamp": "2026-07-09T16:25:19.863502+00:00", "type": "agent_status", "agent": "market_research", "status": "completed"}
+{"id": 46, "timestamp": "2026-07-09T16:25:19.864150+00:00", "type": "agent_status", "agent": "bid_recommender", "status": "running"}
+{"id": 47, "timestamp": "2026-07-09T16:25:23.445864+00:00", "type": "agent_status", "agent": "decision_logic", "status": "completed"}
+{"id": 48, "timestamp": "2026-07-09T16:25:23.455293+00:00", "type": "run_completed", "winner": {"quote_id": "BID-001-Q02", "vendor_name": "", "risk_score": 52.0, "risk_level": "MODERATE", "findings": ["Warranty starts on delivery, which is risky because site readiness and commissioning are not complete; this can burn warranty time before the asset is usable.", "There is a direct conflict between the fixed field and the vendor quote on installation responsibility: fixed field says buyer, while the quote says vendor.", "Advance payment exposure is high at 60% of contract value, and the quote does not state any bank guarantee, retention, or other security.", "Training is included in the quote, but the document does not specify audience, duration, timing, competency criteria, or completion evidence.", "Service support is only partially specified: a 48-hour response target and local service team are stated, but resolution time, uptime commitment, spare parts availability, and remedies are not clearly defined.", "The quote includes compliance and reference claims, but some are explicitly flagged as needing verification, so evidence quality is not fully strong.", "The proposal is operationally mixed: it contains useful execution details, but several critical contract terms remain missing or ambiguous."], "recommendation": "Do not award until the vendor resolves the installation responsibility conflict, converts warranty start to commissioning/acceptance, and provides a bank guarantee or equivalent security for the advance payment. Also require a detailed training plan, service SLA with resolution times and remedies, and written confirmation of who owns site readiness, regulatory approval support, and commissioning milestones."}}
+{"id": 49, "timestamp": "2026-07-09T16:25:23.531093+00:00", "type": "decision_history_stored", "table": "decision_history"}

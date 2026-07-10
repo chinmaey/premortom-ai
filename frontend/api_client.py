@@ -39,6 +39,12 @@ def analyze(payload: dict) -> dict:
     return r.json()
 
 
+def analyze_demo_run(payload: dict) -> dict:
+    r = requests.post(f"{API_BASE}/analyze/demo-run", json=payload, timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
 def upload(filename: str, content: bytes) -> dict:
     files = {"file": (filename, content)}
     r = requests.post(f"{API_BASE}/upload", files=files, timeout=TIMEOUT)

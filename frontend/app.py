@@ -203,18 +203,12 @@ def screen_input():
                     ", ".join(str(x) for x in f["historical_delays_months"]),
                 )
 
-            b1, b2, b3 = st.columns(3)
-            analyze_clicked = b1.form_submit_button(
-                "🔍 Analyze Procurement", use_container_width=True
-            )
-            premortem_clicked = b2.form_submit_button(
+            _, run_col, _ = st.columns(3)
+            run_clicked = run_col.form_submit_button(
                 "🧠 Run PreMortem", use_container_width=True, type="primary"
             )
-            report_clicked = b3.form_submit_button(
-                "📄 Generate Report", use_container_width=True
-            )
 
-        if analyze_clicked or premortem_clicked or report_clicked:
+        if run_clicked:
             try:
                 delays = [
                     float(x.strip())
@@ -243,7 +237,12 @@ def screen_input():
             st.session_state.form = payload
             with st.spinner("Running multi-agent PreMortem review..."):
                 try:
-                    st.session_state.report = api.analyze(payload)
+                    demo_result = api.analyze_demo_run(payload)
+                    st.session_state.report = demo_result["report"]
+                    st.session_state.demo_sample_id = demo_result.get("sample_id", "")
+                    st.session_state.demo_bid_run_id = (
+                        demo_result.get("bid_run", {}).get("run_id", "")
+                    )
                 except Exception as e:
                     st.error(f"Analysis failed: {e}")
                     return
@@ -251,6 +250,13 @@ def screen_input():
                 "PreMortem complete. Open the Investigation Board, Debate Room "
                 "and Executive Dashboard from the sidebar."
             )
+            if st.session_state.get("demo_sample_id"):
+                st.caption(
+                    "Added current input as "
+                    f"{st.session_state.demo_sample_id}; bid run "
+                    f"{st.session_state.get('demo_bid_run_id', '')} started."
+                )
+            _fallback_notice(st.session_state.report)
             _decision_banner(st.session_state.report)
 
 
@@ -293,6 +299,25 @@ def _decision_banner(rep: dict):
     )
 
 
+def _fallback_notice(rep: dict):
+    if not rep:
+        return
+    offline_agents = [
+        agent.get("agent", "Agent")
+        for agent in rep.get("agent_results", [])
+        if agent.get("status") == "offline"
+        or agent.get("metrics", {}).get("agentic_output") is False
+    ]
+    if offline_agents:
+        st.warning(
+            "Live agentic LLM analysis failed for this run, likely due to API or "
+            "internet connectivity. Showing deterministic non-agentic fallback "
+            "output for now. Affected agents: "
+            + ", ".join(offline_agents)
+            + "."
+        )
+
+
 # --------------------------------------------------------------------------- #
 # Screen 2 - Agent Investigation Board
 # --------------------------------------------------------------------------- #
@@ -302,6 +327,7 @@ def screen_agents():
     if not rep:
         st.info("Run a PreMortem on Screen 1 first.")
         return
+    _fallback_notice(rep)
 
     if st.button("▶ Replay live execution"):
         ph = st.empty()

@@ -119,6 +119,38 @@ def analyze(data: ProcurementInput):
     return run_premortem(data)
 
 
+@app.post("/analyze/demo-run")
+def analyze_and_start_demo_bid_run(data: ProcurementInput, background_tasks: BackgroundTasks):
+    """Run the existing single analysis and also add it to the BID-001 bid flow."""
+    source_data = data
+    if data.raw_document_text:
+        source_data, _ = extraction_agent.extract(data.raw_document_text)
+
+    report = run_premortem(source_data)
+    sample = input_bids.save_procurement_input_sample(
+        "BID-001",
+        source_data.model_dump(),
+    )
+    quote_ids = [
+        quote["quote_id"] for quote in input_bids.list_quotes("BID-001")["quotes"]
+    ]
+    run = bid_outputs.create_run("BID-001", quote_ids)
+    background_tasks.add_task(
+        run_bid_evaluation,
+        run["run_id"],
+        "BID-001",
+        quote_ids,
+    )
+    return {
+        "report": report.model_dump(mode="json"),
+        "bid_id": "BID-001",
+        "sample_id": sample["sample_id"],
+        "quote_id": sample["quote_id"],
+        "sample": sample,
+        "bid_run": run,
+    }
+
+
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     content = await file.read()
