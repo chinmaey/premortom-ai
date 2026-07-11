@@ -184,7 +184,8 @@ should not be treated as the main differentiator.
 ```bash
 cd premortem-ai
 cp .env.example .env          # optionally add OPENAI_API_KEY
-docker compose up --build
+docker compose build backend frontend
+docker compose up db backend frontend
 ```
 
 - UI:      http://localhost:8501

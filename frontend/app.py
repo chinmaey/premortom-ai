@@ -100,6 +100,74 @@ st.markdown(
         .neon-grid {grid-template-columns:1fr;}
         .neon-slide {border-radius:24px; padding:22px;}
     }
+    .about-hero {
+        text-align:center;
+        padding:34px 24px;
+        border-radius:18px;
+        background:radial-gradient(900px 420px at 20% -10%, #16233d 0%, #0b1220 60%);
+        border:1px solid #24314d;
+        color:#e6ecf7;
+        margin-bottom:22px;
+    }
+    .about-hero h1 {font-size:2.4rem; margin:8px 0 4px;}
+    .about-tag {color:#4f8cff; font-weight:700;}
+    .about-sub {color:#9fb0cc; max-width:820px; margin:12px auto 0;}
+    .about-pills {display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:18px;}
+    .about-pill {
+        background:#1d2942;
+        border:1px solid #24314d;
+        color:#9fb0cc;
+        padding:6px 12px;
+        border-radius:999px;
+        font-size:0.8rem;
+    }
+    .about-card {
+        background:linear-gradient(180deg, #121a2b 0%, #162034 100%);
+        border:1px solid #24314d;
+        border-radius:16px;
+        padding:24px;
+        margin-bottom:18px;
+        color:#e6ecf7;
+        box-shadow:0 10px 30px rgba(0,0,0,0.18);
+    }
+    .about-card h2 {margin:0 0 6px; color:#ffffff;}
+    .about-card h3 {margin:18px 0 8px; color:#e6ecf7;}
+    .about-muted {color:#9fb0cc; font-style:italic;}
+    .about-badge {
+        display:inline-block;
+        font-size:0.72rem;
+        letter-spacing:1px;
+        text-transform:uppercase;
+        color:#4f8cff;
+        background:rgba(79,140,255,0.12);
+        border:1px solid rgba(79,140,255,0.35);
+        padding:3px 10px;
+        border-radius:6px;
+        margin-bottom:10px;
+        font-weight:700;
+    }
+    .about-badge.impact {color:#38d39f; background:rgba(56,211,159,0.12); border-color:rgba(56,211,159,0.35);}
+    .about-grid {display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+    .about-grid4 {display:grid; grid-template-columns:repeat(4, 1fr); gap:14px;}
+    .about-box {
+        background:#162034;
+        border:1px solid #24314d;
+        border-radius:12px;
+        padding:14px;
+    }
+    .about-box h4 {margin:0 0 5px; color:#4f8cff;}
+    .about-box p {margin:0; color:#9fb0cc; font-size:0.88rem;}
+    .about-flow {display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:14px 0;}
+    .about-step {background:#1d2942; border:1px solid #24314d; padding:6px 10px; border-radius:8px; font-size:0.82rem;}
+    .about-arrow {color:#4f8cff; font-weight:800;}
+    .about-kpi {background:#162034; border:1px solid #24314d; border-radius:12px; padding:14px; text-align:center;}
+    .about-num {font-size:1.6rem; font-weight:800; color:#38d39f;}
+    .about-label {font-size:0.78rem; color:#9fb0cc;}
+    .about-card ul {margin:10px 0; padding-left:20px;}
+    .about-card li {margin-bottom:7px;}
+    @media (max-width: 900px) {
+        .about-grid, .about-grid4 {grid-template-columns:1fr;}
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -175,104 +243,118 @@ with st.sidebar:
 # --------------------------------------------------------------------------- #
 def screen_about():
     st.subheader("About · PreMortem AI")
-    _neon_slide(
-        title="PreMortem AI",
-        subtitle="The AI That Stress-Tests Decisions Before You Make Them",
-        lead="Predict procurement failures before approval, not after loss.",
-        cards=[
-            ("Signals", [
-                "Warning signs existed before the decision.",
-                "Someone noticed them.",
-                "Nobody acted.",
-            ]),
-            ("Premortem", [
-                "PreMortem asks: what failed six months later?",
-                "It finds the answers automatically.",
-            ]),
-        ],
-        page="01 / 05",
-    )
-    _neon_slide(
-        title="The Approval Gate Is the Gap",
-        subtitle="Procurement Risk Is Fragmented Before the Decision",
-        lead="Risk hides across proposal, contract, site, workforce, and history.",
-        cards=[
-            ("Commercial", [
-                "Vendor language and payment terms",
-                "Warranty exclusions and installation ownership",
-            ]),
-            ("Operational", [
-                "Site readiness and workforce readiness",
-                "Market pricing and vendor history",
-            ]),
-            ("Decision", [
-                "PreMortem challenges approval before commitment.",
-            ]),
-        ],
-        page="02 / 05",
-    )
-    _neon_slide(
-        title="How PreMortem Works",
-        subtitle="Autonomous Agentic Expert Team With Human Touch",
-        lead="Upload proposal, contract, purchase order, or project plan.",
-        cards=[
-            ("Skills", [
-                "Skills: focused procurement capabilities.",
-                "Memory: OKF, RAG, history, embeddings.",
-            ]),
-            ("Memory", [
-                "Connections: artifacts now; MCP and A2A next.",
-                "Agents predict failure modes and financial impact.",
-            ]),
-            ("Human Touch", [
-                "Humans provide governance, judgment, and approval.",
-            ]),
-        ],
-        page="03 / 05",
-    )
-    _neon_slide(
-        title="Technical Architecture",
-        subtitle="Inspectable Memory, Artifacts, and Reusable Agent Skills",
-        cards=[
-            ("Agentic AI", [
-                "OpenAI APIs and agents",
-                "Decision Board",
-                "Tool/search fallback",
-            ]),
-            ("Memory", [
-                "OKF, RAG, embeddings",
-                "pgvector history",
-                "Agent-specific chunking",
-            ]),
-            ("Stack", [
-                "Streamlit and FastAPI",
-                "JSON artifacts",
-                "Docker Compose",
-            ]),
-        ],
-        page="04 / 05",
-    )
-    _neon_slide(
-        title="Demo Results and Next Proof Points",
-        subtitle="One Upload. One Report. Potentially Millions Saved.",
-        cards=[
-            ("Outcome", [
-                "Risk Score: [placeholder]",
-                "Failure Probability: [placeholder]",
-                "Decision: [placeholder]",
-            ]),
-            ("Comparison", [
-                "Winner: [placeholder]",
-                "Quote samples: [placeholder]",
-                "Accuracy: [placeholder %]",
-            ]),
-            ("Proof", [
-                "One upload",
-                "One report",
-                "Millions saved",
-            ]),
-        ],
-        page="05 / 05",
+    st.markdown(
+        """
+<section class="about-hero">
+  <div style="font-size:42px">🛡️</div>
+  <div class="about-tag">PreMortem AI</div>
+  <h1>Predicting Procurement Failures Before They Happen</h1>
+  <div class="about-sub">
+    A full-stack Agentic AI platform that simulates a structured business review board
+    before a high-risk procurement is approved. Specialist agents investigate,
+    compare, and a Decision Board issues an auditable GO / CONDITIONS / NO-GO verdict.
+  </div>
+  <div class="about-pills">
+    <span class="about-pill">Agentic Orchestration</span>
+    <span class="about-pill">Decision Board</span>
+    <span class="about-pill">OKF + pgvector Memory</span>
+    <span class="about-pill">Market Research</span>
+    <span class="about-pill">AIIMS MRI Demo</span>
+  </div>
+</section>
+
+<section class="about-card">
+  <span class="about-badge">Solution Architect</span>
+  <h2>1. The Friction</h2>
+  <p class="about-muted">What friction exists that a standard program or human cannot solve efficiently?</p>
+  <p>
+    Procurement failures are visible before approval, but the warning signs are scattered.
+    Risk lives across proposal text, payment terms, warranty clauses, installation ownership,
+    site readiness, workforce readiness, market context, and past outcomes.
+  </p>
+  <div class="about-grid">
+    <div class="about-box"><h4>Why linear logic struggles</h4><p>Inputs are unstructured, risks interact, and failure modes are emergent.</p></div>
+    <div class="about-box"><h4>Why humans struggle</h4><p>No single reviewer is contract lawyer, engineer, accountant, historian, and market analyst.</p></div>
+  </div>
+</section>
+
+<section class="about-card">
+  <span class="about-badge">Solution Architect</span>
+  <h2>2. How The Workflow Thinks And Acts</h2>
+  <p>
+    PreMortem AI runs a simulated review board. The orchestrator behaves like a manager:
+    it assigns work, runs specialists, consolidates findings, and produces the decision package.
+  </p>
+  <div class="about-flow">
+    <span class="about-step">Upload / Input</span><span class="about-arrow">→</span>
+    <span class="about-step">Extraction</span><span class="about-arrow">→</span>
+    <span class="about-step">Specialist Agents</span><span class="about-arrow">→</span>
+    <span class="about-step">Market + History</span><span class="about-arrow">→</span>
+    <span class="about-step">Decision Board</span><span class="about-arrow">→</span>
+    <span class="about-step">Report</span>
+  </div>
+  <ul>
+    <li>Perceives structured and unstructured procurement evidence.</li>
+    <li>Delegates review to focused specialist agents.</li>
+    <li>Uses memory, market context, and artifacts for grounded decisions.</li>
+    <li>Falls back clearly when live LLM/API access fails.</li>
+  </ul>
+</section>
+
+<section class="about-card">
+  <span class="about-badge">Solution Architect</span>
+  <h2>3. Agent Persona</h2>
+  <p>PreMortem AI is an AI Decision Auditor: an autonomous agentic expert team with human touch.</p>
+  <div class="about-grid">
+    <div class="about-box"><h4>Vendor Proposal Agent</h4><p>Extracts comparable fields, omissions, vague text, and proposal evidence.</p></div>
+    <div class="about-box"><h4>Contract Review Agent</h4><p>Reviews warranty, payment, installation, training, and service risk.</p></div>
+    <div class="about-box"><h4>Market Research Agent</h4><p>Adds product, vendor, lifecycle, and benchmark context.</p></div>
+    <div class="about-box"><h4>Bid Recommender</h4><p>Ranks vendors, tradeoffs, cutoffs, and negotiation conditions.</p></div>
+    <div class="about-box"><h4>Decision Board</h4><p>Consolidates the final recommendation and conditions.</p></div>
+    <div class="about-box"><h4>Human Touch</h4><p>Humans provide governance, judgment, approval, and accountability.</p></div>
+  </div>
+</section>
+
+<section class="about-card">
+  <span class="about-badge">Solution Architect</span>
+  <h2>4. Toolset And Technical Stack</h2>
+  <div class="about-grid">
+    <div class="about-box"><h4>Agentic AI</h4><p>OpenAI APIs, specialist agents, tool/search capability, Decision Board, fallback mode.</p></div>
+    <div class="about-box"><h4>Memory</h4><p>OKF, RAG, vector embeddings, pgvector, decision history, agent history.</p></div>
+    <div class="about-box"><h4>Application</h4><p>Streamlit frontend, FastAPI backend, PDF/text parsing, JSON artifacts.</p></div>
+    <div class="about-box"><h4>Deployment</h4><p>Docker Compose with PostgreSQL + pgvector and local demo fallback.</p></div>
+  </div>
+</section>
+
+<section class="about-card">
+  <span class="about-badge impact">Business Impact</span>
+  <h2>5. Business Value And ROI</h2>
+  <div class="about-grid4">
+    <div class="about-kpi"><div class="about-num">[N]</div><div class="about-label">bids tested</div></div>
+    <div class="about-kpi"><div class="about-num">[N]</div><div class="about-label">quote samples</div></div>
+    <div class="about-kpi"><div class="about-num">[%]</div><div class="about-label">accuracy / agreement</div></div>
+    <div class="about-kpi"><div class="about-num">₹</div><div class="about-label">avoidable exposure</div></div>
+  </div>
+  <ul>
+    <li>Prevents capital write-offs before approval.</li>
+    <li>Makes GO / CONDITIONS / NO-GO decisions explainable and audit-ready.</li>
+    <li>Improves negotiation readiness and vendor selection quality.</li>
+    <li>Preserves institutional procurement memory for future reviews.</li>
+  </ul>
+</section>
+
+<section class="about-card">
+  <span class="about-badge">Future Steps</span>
+  <h2>6. Scale And Growth</h2>
+  <ul>
+    <li>Add Quality Evaluation Agent for evidence, confidence, and benchmark checks.</li>
+    <li>Expand RFQ intake and negotiation guidance.</li>
+    <li>Add invoice monitoring and contract compliance for post-award leakage.</li>
+    <li>Connect external tools through MCP and future A2A coordination.</li>
+  </ul>
+</section>
+        """,
+        unsafe_allow_html=True,
     )
 
 
