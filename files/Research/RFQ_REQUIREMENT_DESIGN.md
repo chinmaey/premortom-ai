@@ -853,14 +853,102 @@ requirements:
 
 For the hackathon demo, implement only:
 
-1. One requirement input window.
+1. Chat-first requirement input with compact file upload control.
 2. Role selector with Management default.
-3. Requirement table in session state.
-4. Role-specific linear plot.
-5. Combined radial plot.
-6. Simple cost/value KPI panel.
-7. Publish RFQ snapshot in session state.
+3. Requirement confirmation flow: `Yes, add`, `No`, `Chat further`.
+4. Requirement table in session state with role-grouped expand/collapse.
+5. Editable accepted requirements table.
+6. Procurement Value Map using role-polygon area coverage.
+7. Cost Meter showing actual known cost against proposed budget.
+8. Publish RFQ snapshot in session state.
 
 Do not solve full optimization yet. Present it as a multi-variable procurement
 value design problem that the system visualizes and prepares for later
 optimization.
+
+## Current Implementation Notes
+
+The current Streamlit RFQ page implements the following behavior.
+
+### Chat And Data Entry
+
+- The RFQ page uses chat as the main requirement entry surface.
+- The active role is the person currently speaking in chat.
+- The requirement perspective may differ from the active role. For example,
+  Management can enter a Doctor requirement.
+- The system should track:
+  - `entered_by_role`: who typed or submitted the requirement.
+  - `perspective_role`: which stakeholder perspective owns the requirement.
+- Greetings and casual messages should not become requirements, including simple
+  misspellings such as `helllo`.
+- Known requirement templates are searched across all roles, not only the active
+  role.
+- User-provided priority, value percentage, and cost override template defaults.
+- Unknown custom requirements should only be added after the user provides
+  priority, value percentage, and cost or explicitly says cost is unknown.
+- Proposed requirements are not added until the user confirms.
+
+### Chat UI
+
+- Chat messages use compact avatars such as `MGMT`, `DR`, `FIN`, and `AI`.
+- The full role label should be available by hover/title, not repeated in every
+  message.
+- The composer uses:
+  - a compact folder upload button
+  - a two-line text entry area
+  - a compact send button
+- Native Streamlit upload controls are limited. A true drag-and-drop text-entry
+  area would require a custom component.
+
+### Procurement Value Map
+
+- The implemented value visual is a radar-style role polygon, not a
+  per-requirement radial scatter plot.
+- Each vertex represents a role perspective:
+  - Management
+  - Doctor
+  - Biomedical Engineering
+  - Finance
+  - Procurement
+- Per-role value is the sum of accepted requirement value percentages for that
+  perspective, capped at 100.
+- Overall value coverage is:
+
+```text
+actual role polygon area / maximum outer polygon area
+```
+
+- The maximum value is the polygon with every role vertex at 100.
+- The current value is the polygon generated from accepted requirements.
+
+### Cost Meter
+
+- The current cost visual is a compact Plotly meter, not a draggable slider.
+- A native vertical draggable slider is not available in Streamlit.
+- The meter shows:
+  - blue line/dot: actual known cost from accepted requirements
+  - gray line/dot: proposed procurement budget
+  - rupee labels only
+- The cost meter should not be described as total cost of ownership unless
+  lifecycle costs are explicitly included.
+
+### Requirement Table
+
+- Accepted requirements are shown in role-grouped expand/collapse sections.
+- The table allows editing requirement text, priority, value percentage, and
+  cost.
+- The table key should refresh when requirement IDs change so newly accepted
+  requirements appear immediately.
+- Table edits should be validated before committing them to session state.
+- Invalid edits include negative priority/value/cost, value above 100%, role
+  value totals above 100%, duplicate requirements in the same role, and known
+  cost exceeding the RFQ budget.
+
+### RFQ Error Handling
+
+- Chat add and table edit validations should use the same rules.
+- Missing priority, value percentage, or cost should trigger a clarification
+  message instead of adding a custom requirement.
+- Explicit unknown-cost wording should remain unknown cost, not zero cost.
+- Publish should block invalid RFQs and warn when requirements are absent,
+  stakeholder perspectives are missing, or role coverage is very low.

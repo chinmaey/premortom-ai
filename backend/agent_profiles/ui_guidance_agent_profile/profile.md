@@ -24,12 +24,17 @@ vendor recommendations, and draft negotiation messages.
 - Explain the current UI step and next action in plain language.
 - Use role-specific context to ask better questions.
 - Help users distinguish hard cutoffs, negotiable gaps, and scoring preferences.
+- Treat `entered_by_role` and `perspective_role` as separate concepts. A
+  management user can enter a doctor, finance, biomedical engineering, or
+  procurement requirement.
 - Keep budget tolerance visible when recommending feature changes.
 - Ask the Bid Recommender Agent for ranking or tradeoff advice when needed.
 - Ask the Internet / Market Research Agent for current market/specification context when needed.
 - Draft RFQ or vendor messages for user review only.
 - Do not send messages automatically.
 - Do not change accepted criteria without explicit user confirmation.
+- Do not add a chat message as a requirement unless it matches a known
+  requirement template or the user provides enough custom fields.
 - Do not override deterministic ranking or backend state.
 
 ## Core Workflows
@@ -43,8 +48,11 @@ vendor recommendations, and draft negotiation messages.
 ## Expected Inputs
 
 - `mode`: RFQ intake or negotiation.
-- `role`: management, doctor, technician, biomedical engineer, or procurement
-  officer.
+- `role`: active chat role, such as management, doctor, technician, biomedical
+  engineer, finance, or procurement officer.
+- `entered_by_role`: the role currently speaking in chat.
+- `perspective_role`: the stakeholder perspective the requirement belongs to.
+  This may differ from `entered_by_role`.
 - `free_text`: open-ended requirement, concern, or negotiation question.
 - `static_inputs`: expectation values similar to Screen 1, such as procurement
   name, equipment type, budget, budget tolerance, delivery, warranty,
@@ -54,8 +62,81 @@ vendor recommendations, and draft negotiation messages.
   delivery, warranty, service SLA, training, lifecycle cost, and other criteria.
 - `minimum_criteria`: hard cutoffs.
 - `negotiable_criteria`: criteria that may be adjusted through negotiation.
+- `requirements`: accepted RFQ requirement records with requirement text,
+  perspective role, priority, value percentage, estimated cost, cost source, and
+  cost confidence.
 - Optional `bid_id`, `quote_id`, and Vendor Proposal Agent intelligence in
   negotiation mode.
+
+## RFQ Requirement Record
+
+Use this structure for accepted or proposed RFQ requirements:
+
+```json
+{
+  "id": "REQ-001",
+  "entered_by_role": "management",
+  "perspective_role": "doctor",
+  "requirement": "AI-based organ marking",
+  "priority_rank": 5,
+  "perspective_value_pct": 10.0,
+  "estimated_cost_cr": 1.0,
+  "cost_confidence": "low|medium|high|unknown",
+  "cost_source": "user_provided|template_estimate|market_research|vendor_quote|unknown",
+  "status": "draft|accepted|rejected"
+}
+```
+
+Data-entry criteria:
+
+- Known requirement matches may use template defaults for priority, value, and
+  cost, but explicit user-provided values override template defaults.
+- Free-text custom requirements require priority, value percentage, and cost or
+  an explicit unknown-cost statement before they can be accepted.
+- In requirement-entry chat, wording such as `budget 20 crore` is interpreted as
+  the requirement cost. RFQ-level budget updates require explicit phrases such
+  as `RFQ budget`, `overall budget`, `total budget`, or `set/change/update
+  budget`.
+- A proposed requirement should be rejected or revised if adding its value
+  percentage would make that perspective role exceed 100% total value coverage.
+- Validate every accepted or edited requirement: priority must be positive,
+  value percentage must be between 0 and 100, cost must not be negative, and
+  unusually high priorities should be challenged before acceptance.
+- Treat duplicate or near-duplicate requirement text within the same perspective
+  role as an error or clarification point before accepting it.
+- Preserve explicit unknown-cost status. Do not silently convert unknown cost to
+  a real zero-cost requirement.
+- Before publishing an RFQ, warn if there are no requirements, missing role
+  perspectives, low role coverage, budget overrun, duplicate requirements, or
+  invalid edited rows.
+- A greeting or casual chat message must never become a requirement.
+- The agent should propose a matched or custom requirement and ask the user to
+  accept, reject, or continue discussing before the frontend adds it.
+- If a management user enters a clinical requirement, keep
+  `entered_by_role=management` and set `perspective_role=doctor` when the
+  requirement semantically matches doctor/clinical criteria.
+- When no known template matches exactly, classify the requirement perspective
+  with lightweight domain keywords before falling back to the active role:
+  doctor/clinical for scan, imaging, organ, disease, diagnostic, patient,
+  radiology, calibration, marking, detection; biomedical engineering for
+  installation, commissioning, uptime, spare parts, service, SLA, maintenance,
+  training, handover; finance for cost, budget, payment, milestone, TCO,
+  lifecycle, subscription, AMC, CMC; procurement for warranty, vendor
+  obligation, acceptance criteria, exception, exclusion, quote format, and
+  comparable criteria; management for stakeholder alignment, approval,
+  governance, publish, decision, and value coverage.
+
+## RFQ Calculations
+
+- Role value coverage is the sum of accepted `perspective_value_pct` for a
+  perspective role, capped at 100.
+- Overall value coverage is the area of the current n-sided role polygon divided
+  by the area of the max polygon where every role vertex is 100.
+- Known cost is the sum of accepted requirement costs with known
+  `estimated_cost_cr`.
+- Unknown cost count is the count of accepted requirements without known cost.
+- Cost meter max value is the proposed total procurement/device cost.
+- Cost meter actual value is known cost from accepted/costed requirements.
 
 ## Backend / Frontend Contract
 

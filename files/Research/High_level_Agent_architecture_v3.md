@@ -192,32 +192,38 @@ should own the actual state changes, saved RFQ data, and accepted criteria.
 
 The RFQ Intake and Negotiation UI Guidance Agent has two components:
 
-#### Static Role-Based Intake Component
+#### Chat-First RFQ Value Design Component
 
-The static component is similar to the current first frontend screen, but it is
-intended for management, doctors, technicians, biomedical engineering teams, and
+The first implemented RFQ component should be treated as a chat-first RFQ value
+design workspace rather than a large static form. It is intended for
+management, doctors, biomedical engineering/service teams, finance, and
 procurement users before vendor proposals are submitted.
 
 Instead of capturing vendor proposal values, it captures the organization's
 expectations and constraints.
 
-The static intake should allow the user to:
+The RFQ value design workspace should allow the user to:
 
-- Select role, such as management, doctor, technician, biomedical engineer, or
-  procurement officer.
-- Choose expectation profile, such as premium clinical capability, balanced
-  cost and service, lowest total lifecycle cost, fastest deployment, or strict
-  compliance.
-- Enter budget and allowed tolerance, such as budget plus or minus a percentage.
-- Enter mandatory minimum criteria and negotiable criteria.
-- Enter desired values for technical, operational, service, training, warranty,
-  delivery, installation, and lifecycle-cost expectations.
-- Mark which features are hard cutoffs, negotiable gaps, or scoring preferences.
-- Capture local context such as hospital size, expected patient volume,
-  clinical department needs, existing infrastructure, and staffing readiness.
+- Select the active chat role, such as management, doctor, biomedical engineer,
+  finance, or procurement officer.
+- Add requirements through chat rather than a large form.
+- Enter a requirement from any role while assigning it to the correct
+  stakeholder perspective. For example, management may enter a doctor/clinical
+  requirement.
+- Map known requirements to predefined role templates when possible.
+- Allow custom requirements only when priority, value percentage, and cost or
+  unknown-cost status are supplied.
+- Confirm every proposed requirement before adding it to the accepted RFQ table.
+- Edit accepted requirements in a role-grouped table.
+- Visualize stakeholder value as a role polygon where max value is the full
+  outer polygon and current value is the area of the accepted-requirement
+  polygon.
+- Visualize cost with a cost meter where max is proposed procurement/device
+  cost and actual is currently costed accepted requirements.
+- Publish the accepted RFQ requirement snapshot for the later vendor input and
+  proposal review flow.
 
-This static component produces structured management criteria that downstream
-agents can use:
+This component produces structured RFQ criteria that downstream agents can use:
 
 ```text
 management expectation profile
@@ -225,8 +231,25 @@ management expectation profile
   -> weighted preferences
   -> budget and tolerance
   -> negotiable feature ranges
-	  -> RFQ draft inputs
-	```
+  -> chat-proposed requirements
+  -> accepted role/perspective requirement records
+  -> RFQ draft inputs
+```
+
+Important data model distinction:
+
+```text
+entered_by_role != perspective_role
+```
+
+`entered_by_role` is the user role currently speaking in chat. `perspective_role`
+is the stakeholder perspective that owns the requirement. Management can enter
+requirements on behalf of doctors, finance, biomedical engineering, procurement,
+or management.
+
+Accepted RFQ requirements should carry requirement text, entered-by role,
+perspective role, priority rank, perspective value percentage, estimated cost in
+crore, cost confidence, cost source, and draft/accepted status.
 
 #### Backend and Frontend API Requirement
 
