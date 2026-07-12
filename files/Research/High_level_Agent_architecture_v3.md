@@ -222,6 +222,14 @@ The RFQ value design workspace should allow the user to:
   cost and actual is currently costed accepted requirements.
 - Publish the accepted RFQ requirement snapshot for the later vendor input and
   proposal review flow.
+- Publish the accepted RFQ package to vendors through a dedicated vendor
+  publication page. For the demo, this can generate a vendor-facing RFQ package,
+  select target vendors, and track draft/sent status without requiring real
+  email or portal integration.
+- Treat social-media publication channels such as X or Facebook as future
+  optional distribution connectors. They should not be part of the core demo
+  flow and should require explicit human approval, compliance review, and
+  organization policy checks before posting.
 
 This component produces structured RFQ criteria that downstream agents can use:
 
@@ -234,7 +242,67 @@ management expectation profile
   -> chat-proposed requirements
   -> accepted role/perspective requirement records
   -> RFQ draft inputs
+  -> vendor-facing RFQ publication package
+  -> quote-comparison criteria for recommendation
 ```
+
+#### Vendor RFQ Publication Component
+
+After an RFQ is published to the database, the next screen should package the
+accepted requirements for vendor distribution. This is separate from database
+publish: database publish freezes the buyer-approved RFQ state, while vendor
+publication sends or prepares that state for vendors.
+
+Immediate demo requirements:
+
+- Load the latest published RFQ from `rfq_sessions` and `rfq_requirements`.
+- Show a vendor-facing summary grouped by role/perspective, including mandatory
+  requirements, value-weighted preferences, budget, delivery assumptions, and
+  missing-cost flags.
+- Let the user select or enter vendors for distribution.
+- Generate a draft vendor message and attachment-style RFQ text for review.
+- Track publication status such as `draft`, `ready`, `sent manually`, or
+  `cancelled`.
+- Require explicit user approval before marking anything as vendor-published.
+
+Future connector requirements:
+
+- Email or procurement-portal publication.
+- Vendor acknowledgement tracking.
+- Addendum and RFQ version distribution history.
+- Optional social-media publication through X, Facebook, or similar channels
+  only when procurement policy allows public posting. These channels must be
+  human-approved and should never post automatically from an agent.
+
+#### RFQ-Driven Quote Comparison
+
+The accepted RFQ requirements and their values should become a first-class input
+to vendor proposal review and bid recommendation.
+
+The comparison flow should evolve as follows:
+
+```text
+Published RFQ requirements
+  -> Vendor Proposal Agent maps quote evidence to each requirement
+  -> Contract/Risk agents identify gaps, risks, and ambiguous vendor claims
+  -> Bid Recommender applies minimum criteria, role value weights, cost, and
+     risk guardrails
+  -> Recommendation explains which quote best satisfies the buyer-defined RFQ
+```
+
+Recommendation should use the RFQ requirement values as the buyer-defined value
+model. A quote should not win only because it is low risk or low cost if it does
+not satisfy high-value core requirements. Likewise, an expensive feature should
+not be rewarded unless it maps to accepted RFQ value.
+
+Current demo note:
+
+For the hackathon submission, the UI may present the full loop while the
+existing recommendation output remains the displayed recommendation. Dynamic
+RFQ-specific ground-truth validation is deferred. The correct future evaluation
+method is to use versioned RFQ snapshots, scenario-specific quote sets, and
+rubric/metamorphic tests instead of reusing a static winner label after the RFQ
+requirements change.
 
 Important data model distinction:
 
@@ -1950,13 +2018,16 @@ tonight or explicitly moved to later.
 
 ### Implementation Gaps
 
-1. Frontend RFQ / Negotiation Guidance page is not implemented yet.
-   It should collect role, static expectation inputs, free text, feature
-   weights, minimum criteria, and negotiable criteria, then display the API
-   output.
+1. Vendor RFQ publication page is the next demo-facing gap.
+   The RFQ design page and database publish flow exist, but the next page should
+   package the published RFQ for vendors and track draft/ready/sent-manually
+   status.
 
-2. UI Guidance API exists as the backend integration point, but it still needs
-   Docker verification and frontend wiring.
+2. Dynamic RFQ-ground-truth validation is deferred.
+   Because user-defined RFQ requirements can change the correct recommendation,
+   the old static sample winner should not be treated as universal ground truth.
+   Later evaluation should use versioned RFQ snapshots, scenario golden sets,
+   rubric checks, and metamorphic tests.
 
 3. Recommender use of agent-level history should become explicit.
    The database can store per-agent history now, but recommender retrieval

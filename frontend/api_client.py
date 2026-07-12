@@ -55,6 +55,12 @@ def ui_guidance(payload: dict) -> dict:
     return r.json()
 
 
+def publish_rfq(payload: dict) -> dict:
+    r = requests.post(f"{API_BASE}/rfq/publish", json=payload, timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
+
 def upload(filename: str, content: bytes) -> dict:
     files = {"file": (filename, content)}
     r = requests.post(f"{API_BASE}/upload", files=files, timeout=TIMEOUT)

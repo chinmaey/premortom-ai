@@ -1505,19 +1505,8 @@ def screen_rfq_intake():
             st.rerun()
     with right:
         if st.button("Publish", type="primary", use_container_width=True):
-            publish_errors = _validate_rfq_requirements(
-                st.session_state.rfq_requirements,
-                float(st.session_state.rfq_budget_cr),
-            )
-            publish_warnings = _publish_warnings(st.session_state.rfq_requirements)
-            if publish_errors or publish_warnings:
-                for error in publish_errors:
-                    st.error(error)
-                for warning in publish_warnings:
-                    st.warning(warning)
-                if publish_errors:
-                    st.stop()
-            st.session_state.published_rfq = {
+            publish_payload = {
+                "rfq_id": str((st.session_state.published_rfq or {}).get("rfq_id") or ""),
                 "procurement_name": rfq_name,
                 "equipment_type": equipment_type,
                 "budget_cr": float(st.session_state.rfq_budget_cr),
@@ -1533,7 +1522,32 @@ def screen_rfq_intake():
                     if int(req.get("priority_rank") or 99) > 2
                 ],
             }
-            st.success("RFQ requirements published for this session.")
+            publish_errors = _validate_rfq_requirements(
+                st.session_state.rfq_requirements,
+                float(st.session_state.rfq_budget_cr),
+            )
+            publish_warnings = _publish_warnings(st.session_state.rfq_requirements)
+            if publish_errors or publish_warnings:
+                for error in publish_errors:
+                    st.error(error)
+                for warning in publish_warnings:
+                    st.warning(warning)
+                if publish_errors:
+                    st.stop()
+            try:
+                publish_result = api.publish_rfq(publish_payload)
+            except Exception as exc:
+                st.error(f"RFQ publish failed: {exc}")
+                st.stop()
+            st.session_state.published_rfq = {
+                **publish_payload,
+                "rfq_id": publish_result.get("rfq_id", ""),
+                "publish_result": publish_result,
+            }
+            st.success(
+                "RFQ requirements published to database "
+                f"({publish_result.get('rfq_id', 'RFQ saved')})."
+            )
 
     _render_rfq_kpis(
         [
@@ -1871,6 +1885,8 @@ def screen_database():
     memory = tables.get("agent_memory_chunks", {})
     history = tables.get("decision_history", {})
     history_chunks = tables.get("decision_history_chunks", {})
+    rfq_sessions = tables.get("rfq_sessions", {})
+    rfq_requirements = tables.get("rfq_requirements", {})
 
     st.divider()
     m1, m2, m3 = st.columns(3)
@@ -1888,6 +1904,17 @@ def screen_database():
         "History Chunk Rows",
         int(history_chunks.get("row_count") or 0),
         "table exists" if history_chunks.get("exists") else "not added yet",
+    )
+    r1, r2 = st.columns(2)
+    r1.metric(
+        "Published RFQs",
+        int(rfq_sessions.get("row_count") or 0),
+        "table exists" if rfq_sessions.get("exists") else "not added yet",
+    )
+    r2.metric(
+        "RFQ Requirements",
+        int(rfq_requirements.get("row_count") or 0),
+        "table exists" if rfq_requirements.get("exists") else "not added yet",
     )
 
     if status.get("recent_memory_rows"):

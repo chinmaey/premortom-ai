@@ -860,7 +860,7 @@ For the hackathon demo, implement only:
 5. Editable accepted requirements table.
 6. Procurement Value Map using role-polygon area coverage.
 7. Cost Meter showing actual known cost against proposed budget.
-8. Publish RFQ snapshot in session state.
+8. Publish RFQ snapshot to `rfq_sessions` and `rfq_requirements` in Postgres.
 
 Do not solve full optimization yet. Present it as a multi-variable procurement
 value design problem that the system visualizes and prepares for later
@@ -952,3 +952,31 @@ actual role polygon area / maximum outer polygon area
 - Explicit unknown-cost wording should remain unknown cost, not zero cost.
 - Publish should block invalid RFQs and warn when requirements are absent,
   stakeholder perspectives are missing, or role coverage is very low.
+- A successful publish persists the RFQ session and accepted requirements to the
+  database; session state only keeps the latest published response for the UI.
+
+### Next Step: Vendor Publication
+
+- Add a vendor publication page after database publish.
+- Load the published RFQ from `rfq_sessions` and `rfq_requirements`.
+- Generate a vendor-facing RFQ summary and message for human review.
+- Allow the user to select or enter vendors and mark the package as draft,
+  ready, sent manually, or cancelled.
+- Do not send externally without explicit user approval.
+- Treat X, Facebook, and other social channels as future optional connectors,
+  not part of the current demo implementation.
+
+### Next Step: RFQ-Driven Quote Comparison
+
+- Vendor Proposal Agent should map each vendor quote to every accepted RFQ
+  requirement.
+- Bid Recommender should use requirement priority and value percentage as the
+  buyer-defined value model.
+- Recommendations should explain weighted RFQ value covered, missing core
+  requirements, cost against budget, risk guardrails, and negotiation
+  conditions.
+- For the hackathon submission, keep showing the existing recommendation output
+  while presenting the RFQ flow as the source of future RFQ-aware comparison.
+- Do not validate dynamic RFQ requirements against the old static sample winner.
+  Add versioned RFQ scenarios, rubric checks, and metamorphic tests after the
+  demo deadline.

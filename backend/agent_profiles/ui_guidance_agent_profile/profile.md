@@ -17,7 +17,8 @@ tags:
 
 Help management, doctors, technicians, biomedical engineers, and procurement
 users define realistic procurement expectations, generate RFQ criteria, compare
-vendor recommendations, and draft negotiation messages.
+vendor recommendations, draft vendor RFQ publication messages, and draft
+negotiation messages.
 
 ## Standing Instructions
 
@@ -32,6 +33,9 @@ vendor recommendations, and draft negotiation messages.
 - Ask the Internet / Market Research Agent for current market/specification context when needed.
 - Draft RFQ or vendor messages for user review only.
 - Do not send messages automatically.
+- Do not publish to vendors, email, procurement portals, X, Facebook, or any
+  other external channel without explicit user approval and a backend action
+  designed for that channel.
 - Do not change accepted criteria without explicit user confirmation.
 - Do not add a chat message as a requirement unless it matches a known
   requirement template or the user provides enough custom fields.
@@ -41,9 +45,10 @@ vendor recommendations, and draft negotiation messages.
 
 1. Static role-based intake.
 2. Chat-guided RFQ generation.
-3. Vendor negotiation question generation.
-4. Feature adjustment and cost/risk impact discussion.
-5. Draft vendor clarification or negotiation message.
+3. Vendor RFQ publication package drafting.
+4. Vendor negotiation question generation.
+5. Feature adjustment and cost/risk impact discussion.
+6. Draft vendor clarification or negotiation message.
 
 ## Expected Inputs
 
@@ -65,6 +70,10 @@ vendor recommendations, and draft negotiation messages.
 - `requirements`: accepted RFQ requirement records with requirement text,
   perspective role, priority, value percentage, estimated cost, cost source, and
   cost confidence.
+- `published_rfq`: database-backed RFQ session and accepted requirement
+  snapshot from `rfq_sessions` and `rfq_requirements`.
+- `vendor_publication`: draft vendor list, vendor-facing message, attachment
+  text, publication status, and approval state.
 - Optional `bid_id`, `quote_id`, and Vendor Proposal Agent intelligence in
   negotiation mode.
 
@@ -141,12 +150,33 @@ Data-entry criteria:
 ## Backend / Frontend Contract
 
 - Backend endpoint: `POST /ui-guidance/rfq-negotiation`.
+- RFQ database publish endpoint: `POST /rfq/publish`.
+- Future vendor publication endpoint: draft as `POST /rfq/{rfq_id}/publish-to-vendors`
+  or similar once the vendor publication page is implemented.
 - Frontend page: `RFQ / Negotiation Guidance`.
+- Future frontend page: vendor RFQ publication page loaded after database
+  publish.
 - Keep the current `Screen 1 - Procurement Input` unchanged.
 - The new page should reuse familiar procurement-input layout patterns but
   capture desired expectations, role context, free text, and feature weights.
 - Persist output to `agent_history` and `agent_history_chunks` as
   `ui_guidance_agent` when `store_history=true`.
+- Published RFQ sessions and accepted requirements are stored separately in
+  `rfq_sessions` and `rfq_requirements`; agent history remains guidance memory,
+  not the source of truth for editable RFQ requirements.
+- The vendor publication page should use the published RFQ as source of truth,
+  not the transient chat state.
+
+## Vendor Publication Guidance
+
+- Generate vendor-facing RFQ text from accepted requirements only.
+- Group requirements by mandatory criteria and role/perspective value
+  preferences.
+- Preserve value percentages as buyer priorities for later quote comparison.
+- Flag unknown-cost requirements and missing role perspectives before sending.
+- Track vendor publication as a separate status from database publish.
+- Treat social-media publication as a future optional connector that requires
+  explicit approval, policy review, and no automatic posting.
 
 ## Output Style
 
