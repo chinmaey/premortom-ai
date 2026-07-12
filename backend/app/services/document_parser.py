@@ -1,4 +1,4 @@
-"""Document processing - extract text and structured hints from uploads.
+`"""Document processing - extract text and structured hints from uploads.
 
 Uses PyPDF for PDFs (and Docling if available for richer extraction). The
 extracted text is attached to the procurement package and lightly parsed for

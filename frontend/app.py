@@ -187,6 +187,10 @@ if "form" not in st.session_state:
     st.session_state.form = None
 if "report" not in st.session_state:
     st.session_state.report = None
+if "rfq_guidance" not in st.session_state:
+    st.session_state.rfq_guidance = None
+if "published_rfq" not in st.session_state:
+    st.session_state.published_rfq = None
 
 
 def badge(text: str, color: str) -> str:
@@ -216,13 +220,14 @@ with st.sidebar:
     screen = st.radio(
         "Go to screen",
         [
-            "1 · Procurement Input",
-            "2 · Agent Investigation Board",
-            "3 · Agent Debate Room",
-            "4 · Executive Dashboard",
-            "5 · PreMortem Report",
-            "6 · Database / Memory",
-            "7 · Market Research",
+            "1 · RFQ Intake",
+            "2 · Vendor Procurement Input",
+            "3 · Agent Investigation Board",
+            "4 · Agent Debate Room",
+            "5 · Executive Dashboard",
+            "6 · PreMortem Report",
+            "7 · Database / Memory",
+            "8 · Market Research",
             "★ Bonus Lab (What-If / Digital Twin)",
             "About PreMortem AI",
         ],
@@ -382,10 +387,21 @@ def _neon_slide(title: str, subtitle: str, cards: list[tuple[str, list[str]]], p
 
 
 # --------------------------------------------------------------------------- #
-# Screen 1 - Procurement Input
+# Screen 2 - Vendor Procurement Input
 # --------------------------------------------------------------------------- #
 def screen_input():
-    st.subheader("Screen 1 · Procurement Input")
+    st.subheader("Screen 2 · Vendor Procurement Input")
+    if st.session_state.published_rfq:
+        rfq = st.session_state.published_rfq
+        st.success(
+            "RFQ published. For this demo, vendor input is still entered here; "
+            "later this page can enforce the published RFQ requirements."
+        )
+        with st.expander("Published RFQ Context"):
+            st.markdown(f"**Procurement:** {rfq.get('procurement_name', '')}")
+            st.markdown(f"**Equipment / Service:** {rfq.get('equipment_type', '')}")
+            _bullet_block("Minimum Criteria", rfq.get("minimum_criteria", []))
+            _bullet_block("Negotiable Criteria", rfq.get("negotiable_criteria", []))
 
     col_a, col_b = st.columns([2, 1])
     with col_b:
@@ -560,6 +576,228 @@ def _default_form():
         }
 
 
+# --------------------------------------------------------------------------- #
+# Screen 1 - RFQ Intake
+# --------------------------------------------------------------------------- #
+def screen_rfq_intake():
+    st.subheader("Screen 1 · RFQ Intake")
+    st.caption(
+        "Set requirements first. Publish the RFQ, then use Vendor Procurement "
+        "Input for the vendor proposal in this demo flow."
+    )
+
+    base = st.session_state.form or _default_form()
+    with st.form("rfq_intake_form"):
+        left, right = st.columns([1.2, 1])
+        with left:
+            procurement_name = st.text_input(
+                "Procurement / RFQ Name",
+                str(base.get("procurement_name", "MRI System")),
+            )
+            equipment_type = st.text_input(
+                "Equipment / Service Type",
+                str(base.get("equipment_type", "MRI Machine")),
+            )
+            business_goal = st.text_area(
+                "Business Need",
+                "Procure, install, commission, and support a reliable MRI system "
+                "for hospital diagnostic operations.",
+                height=90,
+            )
+            stakeholder_notes = st.text_area(
+                "Stakeholder Notes",
+                "Doctors need clinical capability and uptime; biomedical engineering "
+                "needs installation, training, service, and spare-parts clarity; "
+                "procurement needs comparable vendor terms.",
+                height=110,
+            )
+            minimum_text = st.text_area(
+                "Mandatory Minimum Criteria",
+                "Warranty starts after commissioning or acceptance\n"
+                "Vendor owns installation and commissioning\n"
+                "Training plan must be included\n"
+                "Service response time and spare-parts support must be stated",
+                height=120,
+            )
+            negotiable_text = st.text_area(
+                "Negotiable Criteria",
+                "Advance payment and retention\n"
+                "Warranty extension\n"
+                "Uptime remedies\n"
+                "Consumables and lifecycle-cost inclusions",
+                height=100,
+            )
+
+        with right:
+            role = st.selectbox(
+                "Reviewer Role",
+                [
+                    "procurement_officer",
+                    "management",
+                    "doctor",
+                    "biomedical_engineer",
+                    "finance",
+                ],
+            )
+            budget_cr = st.number_input(
+                "Expected Budget (₹ Cr)",
+                value=float(base.get("contract_value_cr", 18.0)),
+                min_value=0.0,
+                step=0.5,
+            )
+            expected_delivery_months = st.number_input(
+                "Expected Delivery (months)",
+                value=float(base.get("delivery_timeline_months", 4.0)),
+                min_value=0.0,
+                step=1.0,
+            )
+            warranty_start = st.selectbox(
+                "Preferred Warranty Start",
+                ["On Commissioning", "On Installation", "On Delivery"],
+            )
+            installation_owner = st.selectbox(
+                "Installation Owner",
+                ["Vendor", "Buyer", "Shared"],
+            )
+            training_required = st.checkbox("Training Required", value=True)
+            store_history = st.checkbox("Store as agent history", value=True)
+
+            st.markdown("**Criteria Weights**")
+            clinical_weight = st.slider("Clinical fit", 0, 100, 30)
+            commercial_weight = st.slider("Commercial terms", 0, 100, 25)
+            service_weight = st.slider("Service readiness", 0, 100, 25)
+            lifecycle_weight = st.slider("Lifecycle cost", 0, 100, 20)
+
+        submitted = st.form_submit_button(
+            "Generate RFQ Guidance",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if submitted:
+        minimum_criteria = _lines_from_text(minimum_text)
+        negotiable_criteria = _lines_from_text(negotiable_text)
+        payload = {
+            "mode": "rfq_intake",
+            "role": role,
+            "free_text": "\n".join(
+                [
+                    f"Business need: {business_goal}",
+                    f"Stakeholder notes: {stakeholder_notes}",
+                ]
+            ),
+            "static_inputs": {
+                "procurement_name": procurement_name,
+                "equipment_type": equipment_type,
+                "expected_budget_cr": budget_cr,
+                "expected_delivery_months": expected_delivery_months,
+                "preferred_warranty_start": warranty_start,
+                "installation_owner": installation_owner,
+                "training_required": training_required,
+            },
+            "feature_weights": {
+                "clinical_fit": clinical_weight,
+                "commercial_terms": commercial_weight,
+                "service_readiness": service_weight,
+                "lifecycle_cost": lifecycle_weight,
+            },
+            "minimum_criteria": minimum_criteria,
+            "negotiable_criteria": negotiable_criteria,
+            "store_history": store_history,
+        }
+        with st.spinner("RFQ Intake and Negotiation UI Guidance Agent is reviewing..."):
+            try:
+                st.session_state.rfq_guidance = api.ui_guidance(payload)
+                st.success("RFQ guidance generated.")
+            except Exception as e:
+                st.error(f"RFQ guidance failed: {e}")
+                return
+
+    if st.session_state.rfq_guidance:
+        _render_rfq_guidance(st.session_state.rfq_guidance)
+
+    if st.session_state.published_rfq:
+        st.info(
+            "Published RFQ is active for this session. Continue to "
+            "`2 · Vendor Procurement Input` when the vendor response is ready."
+        )
+
+
+def _lines_from_text(text: str) -> list[str]:
+    return [line.strip(" -\t") for line in text.splitlines() if line.strip(" -\t")]
+
+
+def _render_rfq_guidance(result: dict):
+    rfq = result.get("rfq_intake", {})
+    negotiation = result.get("negotiation_guidance", {})
+    history = result.get("history", {})
+
+    st.divider()
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Agent Status", str(result.get("status", "completed")).title())
+    m2.metric("History Stored", "Yes" if history.get("stored") else "No")
+    m3.metric("Mode", str(result.get("mode", "rfq_intake")).replace("_", " ").title())
+    if history.get("error"):
+        st.warning(f"History storage skipped: {history['error']}")
+
+    st.markdown("### RFQ Intake")
+    st.write(rfq.get("requirement_summary", "No requirement summary returned."))
+    c1, c2 = st.columns(2)
+    with c1:
+        _bullet_block("Suggested Requirements", rfq.get("suggested_requirements", []))
+        _bullet_block("Mandatory Minimum Criteria", rfq.get("minimum_criteria", []))
+    with c2:
+        _bullet_block("Negotiable Criteria", rfq.get("negotiable_criteria", []))
+        _bullet_block("Missing Inputs", rfq.get("missing_inputs", []))
+
+    st.markdown("### Negotiation Preparation")
+    c3, c4 = st.columns(2)
+    with c3:
+        _bullet_block("Questions For Vendor", negotiation.get("negotiation_questions", []))
+        _bullet_block("Contract Conditions", negotiation.get("contract_conditions", []))
+    with c4:
+        _bullet_block(
+            "Cost And Lifecycle Items",
+            negotiation.get("cost_or_lifecycle_items", []),
+        )
+        _bullet_block("Feature Weight Feedback", result.get("feature_weight_feedback", []))
+
+    draft = negotiation.get("vendor_message_draft")
+    if draft:
+        st.markdown("### Vendor Message Draft")
+        st.text_area("Draft", str(draft), height=180, label_visibility="collapsed")
+
+    with st.expander("Evidence, Guardrails, And Raw Agent Output"):
+        _bullet_block("Evidence", result.get("evidence", []))
+        _bullet_block("Guardrails", result.get("guardrails", []))
+        st.json(result)
+
+    st.divider()
+    if st.button("Publish RFQ Requirements", type="primary", use_container_width=True):
+        request_context = result.get("request_context", {})
+        static_inputs = request_context.get("static_inputs", {})
+        st.session_state.published_rfq = {
+            "procurement_name": static_inputs.get("procurement_name", ""),
+            "equipment_type": static_inputs.get("equipment_type", ""),
+            "static_inputs": static_inputs,
+            "minimum_criteria": rfq.get("minimum_criteria", []),
+            "negotiable_criteria": rfq.get("negotiable_criteria", []),
+            "suggested_requirements": rfq.get("suggested_requirements", []),
+            "missing_inputs": rfq.get("missing_inputs", []),
+            "feature_weights": request_context.get("feature_weights", {}),
+        }
+        st.success("RFQ requirements published for this session.")
+
+
+def _bullet_block(title: str, items):
+    st.markdown(f"**{title}**")
+    if not items:
+        st.caption("No items returned.")
+        return
+    for item in items:
+        st.markdown(f"- {item}")
+
+
 def _decision_banner(rep: dict):
     d = rep["recommended_decision"]
     cls = {"GO": "decision-go", "GO WITH CONDITIONS": "decision-cond", "NO-GO": "decision-nogo"}[d]
@@ -597,13 +835,13 @@ def _fallback_notice(rep: dict):
 
 
 # --------------------------------------------------------------------------- #
-# Screen 2 - Agent Investigation Board
+# Screen 3 - Agent Investigation Board
 # --------------------------------------------------------------------------- #
 def screen_agents():
-    st.subheader("Screen 2 · Agent Investigation Board")
+    st.subheader("Screen 3 · Agent Investigation Board")
     rep = st.session_state.report
     if not rep:
-        st.info("Run a PreMortem on Screen 1 first.")
+        st.info("Run a PreMortem from Screen 2 · Vendor Procurement Input first.")
         return
     _fallback_notice(rep)
 
@@ -643,13 +881,13 @@ def screen_agents():
 
 
 # --------------------------------------------------------------------------- #
-# Screen 3 - Agent Debate Room
+# Screen 4 - Agent Debate Room
 # --------------------------------------------------------------------------- #
 def screen_debate():
-    st.subheader("Screen 3 · Agent Debate Room")
+    st.subheader("Screen 4 · Agent Debate Room")
     rep = st.session_state.report
     if not rep:
-        st.info("Run a PreMortem on Screen 1 first.")
+        st.info("Run a PreMortem from Screen 2 · Vendor Procurement Input first.")
         return
 
     st.caption("Simulated debate among the specialist agents.")
@@ -679,13 +917,13 @@ def screen_debate():
 
 
 # --------------------------------------------------------------------------- #
-# Screen 4 - Executive Dashboard
+# Screen 5 - Executive Dashboard
 # --------------------------------------------------------------------------- #
 def screen_dashboard():
-    st.subheader("Screen 4 · Executive Dashboard")
+    st.subheader("Screen 5 · Executive Dashboard")
     rep = st.session_state.report
     if not rep:
-        st.info("Run a PreMortem on Screen 1 first.")
+        st.info("Run a PreMortem from Screen 2 · Vendor Procurement Input first.")
         return
 
     _decision_banner(rep)
@@ -711,13 +949,13 @@ def screen_dashboard():
 
 
 # --------------------------------------------------------------------------- #
-# Screen 5 - PreMortem Report
+# Screen 6 - PreMortem Report
 # --------------------------------------------------------------------------- #
 def screen_report():
-    st.subheader("Screen 5 · PreMortem Report")
+    st.subheader("Screen 6 · PreMortem Report")
     rep = st.session_state.report
     if not rep:
-        st.info("Run a PreMortem on Screen 1 first.")
+        st.info("Run a PreMortem from Screen 2 · Vendor Procurement Input first.")
         return
 
     st.markdown(f"## PREMORTEM REPORT — {rep['procurement_name']}")
@@ -771,10 +1009,10 @@ def _download(fmt: str, rep: dict, mime: str):
 
 
 # --------------------------------------------------------------------------- #
-# Screen 6 - Database / Memory
+# Screen 7 - Database / Memory
 # --------------------------------------------------------------------------- #
 def screen_database():
-    st.subheader("Screen 6 · Database / Memory")
+    st.subheader("Screen 7 · Database / Memory")
     st.caption(
         "Read-only view of the local Postgres/pgvector state. "
         "Agent memory and decision history are intentionally tracked separately."
@@ -844,10 +1082,10 @@ def screen_database():
 
 
 # --------------------------------------------------------------------------- #
-# Screen 7 - Market Research
+# Screen 8 - Market Research
 # --------------------------------------------------------------------------- #
 def screen_market_research():
-    st.subheader("Screen 7 · Market Research")
+    st.subheader("Screen 8 · Market Research")
 
     bid_id = st.text_input("Bid ID", value="BID-001")
     if st.button("Load latest market research", use_container_width=True):
@@ -973,7 +1211,7 @@ def screen_bonus():
     st.subheader("★ Bonus Lab · Digital Twin & What-If Analysis")
     rep = st.session_state.report
     if not st.session_state.form:
-        st.info("Run a PreMortem on Screen 1 first.")
+        st.info("Run a PreMortem from Screen 2 · Vendor Procurement Input first.")
         return
 
     st.caption(
@@ -1071,18 +1309,20 @@ def screen_bonus():
 if screen.startswith("About"):
     screen_about()
 elif screen.startswith("1"):
-    screen_input()
+    screen_rfq_intake()
 elif screen.startswith("2"):
-    screen_agents()
+    screen_input()
 elif screen.startswith("3"):
-    screen_debate()
+    screen_agents()
 elif screen.startswith("4"):
-    screen_dashboard()
+    screen_debate()
 elif screen.startswith("5"):
-    screen_report()
+    screen_dashboard()
 elif screen.startswith("6"):
-    screen_database()
+    screen_report()
 elif screen.startswith("7"):
+    screen_database()
+elif screen.startswith("8"):
     screen_market_research()
 else:
     screen_bonus()
